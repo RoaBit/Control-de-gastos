@@ -254,7 +254,7 @@ function addInvestmentDetailsFields(){
   const goalForm=$('#goal-form');addHelp(goalForm.elements.linkType.closest('label'),'Vincular muestra el saldo o rendimiento como avance. No aparta dinero y el rendimiento puede variar.');
 }
 function populateRedirectInvestmentChoices(selected='',excludeId=''){const select=$('#redirect-investment');if(!select)return;select.innerHTML='<option value="">No redirigir</option>'+state.investments.filter(investment=>Number(investment.id)!==Number(excludeId)).map(investment=>`<option value="${investment.id}">${escapeHtml(investmentName(investment))}</option>`).join('');select.value=selected?String(selected):'';}
-function addHelp(label,text){const button=document.createElement('button');button.type='button';button.className='help-bubble';button.textContent='?';button.setAttribute('aria-label','Ver explicación');button.setAttribute('aria-expanded','false');const popover=document.createElement('span');popover.className='help-popover';popover.textContent=text;popover.hidden=true;button.onclick=()=>{const open=popover.hidden;popover.hidden=!open;button.setAttribute('aria-expanded',String(open));};const existingLine=label.querySelector(':scope > .label-line');if(existingLine){existingLine.append(button);existingLine.after(popover);return;}const titleNode=label.tagName==='LABEL'?[...label.childNodes].find(node=>node.nodeType===3&&node.textContent.trim()):null;if(titleNode){const line=document.createElement('span');line.className='label-line';titleNode.replaceWith(line);line.append(titleNode,button);line.after(popover);}else label.append(button,popover);}
+function addHelp(label,text){const button=document.createElement('button');button.type='button';button.className='help-bubble';button.textContent='?';button.setAttribute('aria-label','Ver explicación');button.setAttribute('aria-expanded','false');const popover=document.createElement('span');popover.className='help-popover';popover.textContent=text;popover.hidden=true;button.onclick=event=>{event.preventDefault();event.stopPropagation();const open=popover.hidden;closeHelpPopovers();popover.hidden=!open;button.setAttribute('aria-expanded',String(open));};const existingLine=label.querySelector(':scope > .label-line');if(existingLine){existingLine.append(button);existingLine.after(popover);return;}const titleNode=label.tagName==='LABEL'?[...label.childNodes].find(node=>node.nodeType===3&&node.textContent.trim()):null;if(titleNode){const line=document.createElement('span');line.className='label-line';titleNode.replaceWith(line);line.append(titleNode,button);line.after(popover);}else label.append(button,popover);}
 function compactHelp(){
   const investment=$('#investment-form'),recurring=$('#recurring-form'),budget=$('#budget-form'),goal=$('#goal-form');
   [investment,recurring,budget,goal].forEach(form=>form.querySelectorAll('.form-help').forEach(node=>node.remove()));
@@ -882,4 +882,41 @@ function renderBackupReminder(){
   box.hidden=!count||last<14||snoozed;
   $('#backup-reminder-text').textContent=last===Infinity?'Tus datos solo se guardan en este dispositivo. Si borras los datos del navegador o cambias de celular, se pierden. Descarga un respaldo para no perderlos.':`Tu último respaldo fue hace ${last} días. Descarga uno nuevo para no perder lo que has anotado.`;
 }
+/* Solo una ayuda abierta a la vez; se cierra al tocar fuera o con Esc */
+function closeHelpPopovers(){$all('.help-popover:not([hidden])').forEach(node=>node.hidden=true);$all('.help-bubble[aria-expanded="true"]').forEach(node=>node.setAttribute('aria-expanded','false'));}
+document.addEventListener('click',event=>{if(!event.target.closest('.help-popover,.help-bubble'))closeHelpPopovers();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeHelpPopovers();});
+/* Tutorial breve: aparece la primera vez y se puede volver a ver desde Configuración */
+const TUTORIAL_STEPS=[
+  {icon:'👋',title:'Bienvenido a Claro',text:'Claro te ayuda a ver cuánto dinero tienes, en qué se va y cuánto tendrás en los próximos meses. Tus datos se guardan solo en este dispositivo: nadie más los ve.'},
+  {icon:'🏦',title:'1. Agrega tus cuentas',text:'En «Inversiones», toca «＋ Agregar cuenta» y escribe cuánto tienes hoy en cada banco. Puedes elegir si es de débito o tarjeta de crédito, y si te paga intereses.',page:'capital',action:'Ir a mis cuentas'},
+  {icon:'🧾',title:'2. Anota lo que gastas y recibes',text:'Toca «＋ Movimiento real» cada vez que pagues o te llegue dinero. Elige la cuenta para que su saldo se actualice solo.',page:'movimientos',action:'Ir a Movimientos'},
+  {icon:'🔁',title:'3. Planea lo que se repite',text:'En «Presupuestos» agrega tu nómina, la renta o tus suscripciones como planes recurrentes, y ponte límites por categoría. Claro te muestra cuánto te queda libre al mes.',page:'presupuestos',action:'Ir a Presupuestos'},
+  {icon:'📈',title:'4. Haz crecer tu dinero',text:'En «Inversiones» registra tus inversiones con su tasa y plazo. Verás una proyección de cuánto tendrás. En «Metas» puedes ahorrar para algo en especial.',page:'capital',action:'Ir a Inversiones'},
+  {icon:'💡',title:'5. Revisa y respalda',text:'En «Resumen» ves la gráfica de tu dinero del mes. Si tienes dudas, toca cualquier «?». Y de vez en cuando, en Configuración, toca «Descargar respaldo» para no perder tus datos.',page:'inicio',action:'Ir al Resumen'}
+];
+let tutorialStep=0;
+function setupTutorial(){
+  document.body.insertAdjacentHTML('beforeend','<dialog id="tutorial-dialog" class="tutorial-dialog" aria-labelledby="tutorial-title"><div class="dialog-head"><span class="eyebrow" id="tutorial-count"></span><button type="button" class="close-dialog" id="tutorial-close" aria-label="Cerrar tutorial">×</button></div><div class="tutorial-icon" id="tutorial-icon" aria-hidden="true"></div><h2 id="tutorial-title"></h2><p id="tutorial-text"></p><button type="button" class="text-link tutorial-go" id="tutorial-go"></button><div class="tutorial-dots" id="tutorial-dots"></div><div class="tutorial-actions"><button type="button" class="small-button" id="tutorial-back">Atrás</button><button type="button" class="primary-button" id="tutorial-next">Siguiente</button></div></dialog>');
+  const finish=()=>{state.preferences.tutorialSeen=true;save();$('#tutorial-dialog').close();};
+  $('#tutorial-close').onclick=finish;
+  $('#tutorial-dialog').addEventListener('cancel',()=>{state.preferences.tutorialSeen=true;save();});
+  $('#tutorial-back').onclick=()=>{tutorialStep=Math.max(0,tutorialStep-1);renderTutorial();};
+  $('#tutorial-next').onclick=()=>{if(tutorialStep>=TUTORIAL_STEPS.length-1)finish();else{tutorialStep++;renderTutorial();}};
+  $('#tutorial-go').onclick=()=>{const step=TUTORIAL_STEPS[tutorialStep];finish();goToPage(step.page,true);};
+  const row=$('#export-button').closest('.settings-row');
+  row.insertAdjacentHTML('beforebegin','<div class="settings-row"><span>¿Cómo se usa Claro?</span><button type="button" class="small-button" id="open-tutorial">Ver tutorial</button></div>');
+  $('#open-tutorial').onclick=()=>openTutorial();
+  if(!state.preferences.tutorialSeen)setTimeout(()=>{if(!document.querySelector('dialog[open]'))openTutorial();},400);
+}
+function openTutorial(){tutorialStep=0;renderTutorial();$('#tutorial-dialog').showModal();}
+function renderTutorial(){
+  const step=TUTORIAL_STEPS[tutorialStep],last=tutorialStep===TUTORIAL_STEPS.length-1;
+  $('#tutorial-count').textContent=`PASO ${tutorialStep+1} DE ${TUTORIAL_STEPS.length}`;
+  $('#tutorial-icon').textContent=step.icon;$('#tutorial-title').textContent=step.title;$('#tutorial-text').textContent=step.text;
+  $('#tutorial-go').hidden=!step.page;$('#tutorial-go').textContent=step.action?`${step.action} →`:'';
+  $('#tutorial-dots').innerHTML=TUTORIAL_STEPS.map((_,index)=>`<i class="${index===tutorialStep?'active':''}"></i>`).join('');
+  $('#tutorial-back').hidden=tutorialStep===0;$('#tutorial-next').textContent=last?'Empezar':'Siguiente';
+}
 setup();
+setupTutorial();

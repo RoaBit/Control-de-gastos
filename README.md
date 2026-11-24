@@ -29,7 +29,8 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Inversiones que se pagan con un ingreso recurrente y proyección a 1 año por defecto.
 - ISR estimado con la retención de México 2026 (0.9% anual sobre el saldo) como valor recomendado.
 - Plan para reponer cuando un gasto supera su límite, apartando dinero de un ingreso recurrente.
-- Explicaciones "?" en lenguaje sencillo en cada sección y campo.
+- Explicaciones "?" en lenguaje sencillo en cada sección y campo; en el celular se abren debajo del campo, una a la vez.
+- Tutorial breve de 6 pasos la primera vez que abres la app (se puede volver a ver en Configuración).
 - Gráficas que se actualizan con tus propios registros y el mes actual.
 - Funcionamiento local sin conexión una vez servida desde un hosting HTTPS.
 
