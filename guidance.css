@@ -62,3 +62,4 @@ body[data-theme="dark"] .reminder-date{color:#8fd8c4}
 .anchor-dialog{padding:22px;border-radius:16px;background:var(--card);color:var(--ink);border:1px solid var(--line);width:min(420px,calc(100vw - 32px))}.anchor-dialog h2{font-size:20px;margin:0 0 8px}.anchor-dialog::backdrop{background:rgba(10,20,18,.55)}
 .chart-readout .readout-toggle{font-size:inherit;padding:3px 6px;gap:5px;color:inherit}.chart-readout .readout-toggle i{width:9px;height:9px;border-radius:50%}.chart-readout .help-popover{flex-basis:100%}
 .accounts-limits-toggle{font-size:13px;margin:4px 0 10px}.projection-lines-legend .help-popover{flex-basis:100%}
+.chart-toggles{margin-top:10px;align-items:center}.chart-toggles .legend-toggle{font-size:inherit;color:inherit}.chart-toggles .legend-toggle i{width:14px;height:3px;border-radius:2px;display:inline-block}.chart-toggles .help-popover{flex-basis:100%}.limit-row th,.limit-row td{color:var(--muted);font-weight:500}
