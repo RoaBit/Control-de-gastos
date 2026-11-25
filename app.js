@@ -457,15 +457,59 @@ function setup(){
 }
 function registerServiceWorker(){
   if(!('serviceWorker'in navigator))return;
-  let reloading=false;const hadController=Boolean(navigator.serviceWorker.controller);
-  // Al llegar una versión nueva, la app se recarga sola; si estás llenando un formulario, te deja un botón para hacerlo cuando quieras.
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading||!hadController)return;if(document.querySelector('dialog[open]')){$('#update-banner').hidden=false;$('#update-button').onclick=()=>{reloading=true;location.reload();};return;}reloading=true;location.reload();});
+  const hadController=Boolean(navigator.serviceWorker.controller);let reloading=false;
+  const reload=()=>{if(reloading)return;reloading=true;location.reload();};
+  // La versión nueva solo se usa cuando ya se descargó completa (y tú lo aceptaste). Si estás llenando un formulario, espera a que termines.
+  navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type!=='UPDATED')return;if(document.querySelector('dialog[open]'))showUpdateBanner('ready');else reload();});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController&&!document.querySelector('dialog[open]'))reload();});
   navigator.serviceWorker.register('./service-worker.js',{updateViaCache:'none'}).then(registration=>{
-    if(registration.waiting)registration.waiting.postMessage('SKIP_WAITING');
-    const check=()=>registration.update().catch(()=>{});
+    const check=()=>{registration.update().catch(()=>{});checkForUpdate();};
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check();});
-    setInterval(check,30*60*1000);
+    setInterval(check,30*60*1000);checkForUpdate();
   }).catch(()=>{});
+  $('#update-check')?.addEventListener('click',()=>checkForUpdate(true));
+}
+const updateState={available:null,dismissed:null,downloading:false};
+function formatBytes(bytes){return bytes<1024?`${bytes} B`:bytes<1024*1024?`${Math.max(1,Math.round(bytes/1024))} KB`:`${(bytes/1024/1024).toFixed(1)} MB`;}
+async function activeVersion(){try{const found=await (await caches.open('claro-meta')).match('./__claro-active.json');return found?found.json():null;}catch{return null;}}
+// Revisa si hay versión nueva descargando solo version.json (~2 KB) y calcula cuánto pesan los archivos que cambiaron.
+async function checkForUpdate(manual=false){
+  const status=$('#update-status');
+  if(!navigator.serviceWorker?.controller){if(manual&&status)status.textContent='Las actualizaciones se activan al instalar o recargar la app.';return;}
+  if(manual&&status)status.textContent='Buscando…';
+  try{
+    const [active,response]=await Promise.all([activeVersion(),fetch('./version.json',{cache:'no-store'})]);
+    if(!response.ok)throw new Error();const latest=await response.json();
+    if(status)status.textContent=active?.label&&!/^claro-v/.test(active.label)?`Versión del ${active.label}`:'';
+    if(!active||active.id===latest.id){updateState.available=null;$('#update-banner').hidden=true;if(manual&&status)status.textContent=(status.textContent?status.textContent+' · ':'')+'Estás al día.';return;}
+    const oldFiles=active.files||{};let bytes=0;
+    Object.entries(latest.files).forEach(([file,meta])=>{if(oldFiles[file]?.hash!==meta.hash)bytes+=meta.download||meta.size;});
+    updateState.available={id:latest.id,bytes};
+    if(status)status.textContent=`Hay una versión nueva (${formatBytes(bytes)}).`;
+    if(manual||updateState.dismissed!==latest.id)showUpdateBanner('ask');
+  }catch{if(manual&&status)status.textContent='No se pudo revisar. Revisa tu conexión e intenta de nuevo.';}
+}
+function showUpdateBanner(mode){
+  // Con una ventana abierta el aviso no se podría tocar: se muestra al cerrarla.
+  const openDialog=document.querySelector('dialog[open]');if(openDialog){openDialog.addEventListener('close',()=>showUpdateBanner(mode),{once:true});return;}
+  const banner=$('#update-banner'),text=$('#update-text'),yes=$('#update-button'),no=$('#update-later');
+  banner.hidden=false;no.hidden=mode!=='ask';yes.disabled=false;
+  const cellular=navigator.connection&&navigator.connection.type==='cellular';
+  if(mode==='ask'){
+    const size=formatBytes(updateState.available?.bytes||0);
+    text.textContent=`Hay una nueva versión de Claro (${size}${cellular?', con datos móviles':''}). ¿Descargarla?`;
+    yes.textContent='Descargar';
+    yes.onclick=downloadUpdate;
+    no.onclick=()=>{updateState.dismissed=updateState.available?.id;banner.hidden=true;};
+  }else if(mode==='ready'){text.textContent='La nueva versión está lista.';yes.textContent='Usarla ahora';yes.onclick=()=>location.reload();}
+}
+function downloadUpdate(){
+  const controller=navigator.serviceWorker?.controller;if(!controller||updateState.downloading)return;
+  updateState.downloading=true;
+  const text=$('#update-text'),yes=$('#update-button');$('#update-later').hidden=true;yes.disabled=true;text.textContent='Descargando la nueva versión…';
+  const channel=new MessageChannel();
+  channel.port1.onmessage=event=>{updateState.downloading=false;if(event.data?.ok)return;yes.disabled=false;$('#update-later').hidden=false;text.textContent='No se pudo descargar. Tu versión actual sigue funcionando; intenta más tarde.';yes.textContent='Reintentar';};
+  controller.postMessage({type:'DOWNLOAD_UPDATE'},[channel.port2]);
 }
 function showReminder(title,body){
   const options={body,icon:'icon-192.png',badge:'icon-192.png',tag:`claro-${title}-${body}`};

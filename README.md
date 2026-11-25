@@ -61,3 +61,11 @@ Responsable: Fernando Roa Castillo (RoaBit) · claros.help@gmail.com
 ## Licencia
 
 © 2026 Fernando Roa Castillo. Todos los derechos reservados. El código es visible, pero no se permite copiarlo, modificarlo ni redistribuirlo sin permiso.
+
+## Actualizaciones
+
+La app no descarga versiones nuevas por su cuenta. Al abrirla revisa `version.json` (~2 KB), calcula cuánto pesan
+solo los archivos que cambiaron y pregunta «¿Descargarla?». Si aceptas, baja esos archivos, comprueba que llegaron
+completos y recarga. También se puede revisar en Configuración → Actualizaciones.
+
+Antes de cada publicación hay que regenerar la lista de archivos: `python3 tools/make-version.py`.

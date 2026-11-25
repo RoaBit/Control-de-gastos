@@ -1,0 +1,71 @@
+{
+ "id": "8bd5e9f24fda",
+ "label": "25/11/2026 06:32",
+ "files": {
+  "./index.html": {
+   "hash": "62aab07983fe7aa39bc0c140119ba7cb6f7fe646f1e82917d12835daa715686c",
+   "size": 28033,
+   "download": 6725
+  },
+  "./legal.html": {
+   "hash": "3d0804f5e88ad426ed5e56927970699409953abb63ddc35d503d9010cf9f6562",
+   "size": 4048,
+   "download": 1721
+  },
+  "./styles.css": {
+   "hash": "9bdc82a0909c3f1c3a4a01db3ba6014a240abaa3658fb2d27869def8986697de",
+   "size": 9292,
+   "download": 2748
+  },
+  "./overrides.css": {
+   "hash": "36976534399db4c7e0173ee1b3bfaff7d9ce61e29e1948e2496e3bfbe777c831",
+   "size": 7266,
+   "download": 2005
+  },
+  "./guidance.css": {
+   "hash": "6459010a28f4721c26396dcf4c045acbe6a92a4d088ee59c91217c4e7e64218b",
+   "size": 16431,
+   "download": 4104
+  },
+  "./app.js": {
+   "hash": "2f66fdc1047c49823a3e35f0f0cb91044fa7b8b2ccb4ebf144f11ced4283b37d",
+   "size": 205512,
+   "download": 57104
+  },
+  "./manifest.webmanifest": {
+   "hash": "f384d93dd2ebd00bfe5f26bf7303a069a1c9c69e4306653e0607c4e73a3aaa94",
+   "size": 574,
+   "download": 287
+  },
+  "./icon.svg": {
+   "hash": "dea5015f2a5b56eed9a666d628004ef349d630eac24b0a643566a6be3bce04de",
+   "size": 303,
+   "download": 232
+  },
+  "./icon-192.png": {
+   "hash": "292d1230bae0608568d9d40a6e51274d6e667b0d281de002531a5f2051bbc55f",
+   "size": 11961,
+   "download": 11961
+  },
+  "./icon-512.png": {
+   "hash": "f2b5222b1c6d2718e1ea2476d1573ec1031ee1157702da5ca41b42aaba576118",
+   "size": 26473,
+   "download": 26473
+  },
+  "./icon-maskable-512.png": {
+   "hash": "f7b7b631afffe9e0de278ef7d8f0b974e7e0d7ff231a2d15bc58d68efa9e6605",
+   "size": 17610,
+   "download": 17610
+  },
+  "./apple-touch-icon.png": {
+   "hash": "2a6d7d356de31f99da25888e31ec4f8ee7db477ac3e1fa202a0f26bbaabfb115",
+   "size": 9270,
+   "download": 9270
+  },
+  "./favicon-32.png": {
+   "hash": "c959d16d5a60610c768b5ad7ac9bc18c41fc4625e8c82338eb9599dee96c4de5",
+   "size": 6714,
+   "download": 6714
+  }
+ }
+}
