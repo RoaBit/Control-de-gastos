@@ -46,3 +46,5 @@ body[data-theme="dark"] .text-link,body[data-theme="dark"] .budget-sources-picke
 body[data-theme="dark"] .eyebrow{color:#a9bcb5}
 body[data-theme="dark"] .update-banner{background:#e6efeb;color:#101a18}
 .legal-card p{color:var(--ink)}.legal-updated{color:var(--ink);opacity:.8}
+body[data-theme="dark"] .toast{background:#e6efeb;color:#101a18;box-shadow:0 8px 24px #0008}
+body[data-theme="dark"] .reminder-date{color:#8fd8c4}
