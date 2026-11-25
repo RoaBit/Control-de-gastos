@@ -745,7 +745,7 @@ function drawMonthChart(series,info,prefs,aria){
   const zero=low<0&&high>0?`<line x1="${left}" y1="${y(0)}" x2="${W-right}" y2="${y(0)}" stroke="#aab9b2" stroke-width="1.2"/>`:'';
   const xTicks=[...new Set([1,5,10,15,20,25,info.days])].filter(day=>day<=info.days&&(day===info.days||info.days-day>=3));
   const xLabels=xTicks.map(day=>`<text x="${x(day)}" y="${H-Math.round(fs*0.6)}" text-anchor="middle" fill="#80928c" font-size="${fs}">${day}</text>`).join('');
-  const future=info.todayDay<info.days?`<rect x="${x(info.todayDay)}" y="${top}" width="${x(info.days)-x(info.todayDay)}" height="${plotH}" fill="#80928c" opacity=".07"/><line x1="${x(info.todayDay)}" y1="${top}" x2="${x(info.todayDay)}" y2="${top+plotH}" stroke="#80928c" stroke-dasharray="4 4"/><text x="${x(info.todayDay)+(info.todayDay>info.days*0.6?-6:6)}" y="${top+fs}" text-anchor="${info.todayDay>info.days*0.6?'end':'start'}" fill="#80928c" font-size="${fs}">Hoy${series.some(item=>item.projected)?(fs>16?' · luego estimado':' · después: estimado'):''}</text>`:'';
+  const future=info.todayDay<info.days?`<rect x="${x(info.todayDay)}" y="${top}" width="${x(info.days)-x(info.todayDay)}" height="${plotH}" fill="#80928c" opacity=".07"/><line x1="${x(info.todayDay)}" y1="${top}" x2="${x(info.todayDay)}" y2="${top+plotH}" stroke="#80928c" stroke-dasharray="4 4"/><text x="${x(info.todayDay)+(info.todayDay>info.days*0.6?-6:6)}" y="${top+fs}" text-anchor="${info.todayDay>info.days*0.6?'end':'start'}" fill="#80928c" font-size="${fs}">Hoy</text>`:'';
   const selected=chartSelectedDay&&chartSelectedDay!==info.todayDay?`<line x1="${x(chartSelectedDay)}" y1="${top}" x2="${x(chartSelectedDay)}" y2="${top+plotH}" stroke="#146c5b" stroke-width="1.5"/>`:'';
   const pathFor=list=>{let path='',started=false;(list||[]).forEach((value,index)=>{if(value===null||value===undefined)return;path+=`${started?'L':'M'} ${x(index+1).toFixed(1)} ${y(value).toFixed(1)} `;started=true;});return path;};
   const valueAt=(item,index)=>index+1>info.todayDay?item.projected?.[index]??null:item.values[index];
@@ -769,15 +769,16 @@ function renderMoneyChart(){
   const footnote=[cardFootnote(),groups.length?'Las cuentas empiezan con el saldo que registraste (no cuenta como ingreso).':'',estimate&&groups.length?'La línea punteada después de hoy es una estimación con tus planes recurrentes.':'',['income','expense','net'].some(key=>show[key])?'Ingresos, gastos y neto se acumulan desde el día 1 y no incluyen inversiones ni traspasos.':''].filter(Boolean).join(' ');
   const aria='Tu dinero por día durante este mes';
   const visible=series.filter(item=>!prefs.hidden.includes(item.key));
-  $('#money-chart-subtitle').textContent=subtitle;$('#money-chart-footnote').textContent=footnote;
-  $('#money-chart-legend').innerHTML=series.map(item=>{const off=prefs.hidden.includes(item.key);return `<button type="button" class="legend-toggle ${off?'off':''}" data-key="${escapeHtml(item.key)}" aria-pressed="${!off}" title="${off?'Mostrar':'Ocultar'} esta línea"><i style="background:${item.color};height:${item.key==='total'?4:3}px"></i>${escapeHtml(item.label)}</button>`;}).join('');
+  $('#money-chart-subtitle').textContent=subtitle;$('#money-chart-footnote').textContent='';$('#money-chart-footnote').hidden=true;
+  $('#money-chart-legend').innerHTML='';$('#money-chart-legend').hidden=true;
   if(!series.length){$('#line-chart').innerHTML=`<p class="empty">${(show.accounts||show.investments)&&!items.length?(show.investments&&!show.accounts?'Aún no tienes inversiones. Agrégalas en «Inversiones».':'Aún no tienes cuentas. Agrégalas en «Cuentas».'):'No elegiste nada para ver. Toca «Ajustar gráfica» y marca lo que quieras.'}</p>`;$('#money-chart-readout').innerHTML='';return;}
   $('#line-chart').innerHTML=visible.length?drawMonthChart(visible,info,prefs,aria):'<p class="empty">Todas las líneas están ocultas. Toca un nombre de la leyenda para mostrarla.</p>';
   const maxDay=visible.some(item=>item.projected)?info.days:info.todayDay;if(chartSelectedDay>maxDay)chartSelectedDay=null;
   const day=chartSelectedDay||info.todayDay,estimated=day>info.todayDay,dayName=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}).format(new Date(info.year,info.month,day));
   const valueOn=item=>estimated?item.projected?.[day-1]:item.values[day-1];
-  $('#money-chart-readout').innerHTML=`<strong>${day===info.todayDay?`Hoy, ${dayName}`:dayName}${estimated?' (estimado)':''}:</strong> ${visible.filter(item=>valueOn(item)!==null&&valueOn(item)!==undefined).map(item=>`<span><i style="background:${item.color}"></i>${escapeHtml(item.label)} ${money.format(valueOn(item))}</span>`).join('')}`;
-  $all('#money-chart-legend .legend-toggle').forEach(button=>button.onclick=()=>{const key=button.dataset.key,hidden=new Set(prefs.hidden);hidden.has(key)?hidden.delete(key):hidden.add(key);prefs.hidden=[...hidden];save();renderMoneyChart();});
+  $('#money-chart-readout').innerHTML=`<strong>${day===info.todayDay?`Hoy, ${dayName}`:dayName}${estimated?' (estimado)':''}:</strong> ${series.map(item=>{const off=prefs.hidden.includes(item.key),value=valueOn(item);return `<button type="button" class="legend-toggle readout-toggle ${off?'off':''}" data-key="${escapeHtml(item.key)}" aria-pressed="${!off}" title="${off?'Mostrar':'Ocultar'} esta línea"><i style="background:${item.color}"></i>${escapeHtml(item.label)}${!off&&value!==null&&value!==undefined?` ${money.format(value)}`:''}</button>`;}).join('')}`;
+  addHelp($('#money-chart-readout'),`Toca un nombre para ocultar o mostrar su línea en la gráfica. ${footnote}`.trim());
+  $all('#money-chart-readout .legend-toggle').forEach(button=>button.onclick=()=>{const key=button.dataset.key,hidden=new Set(prefs.hidden);hidden.has(key)?hidden.delete(key):hidden.add(key);prefs.hidden=[...hidden];save();renderMoneyChart();});
   $all('#line-chart .chart-day').forEach(rect=>rect.onclick=()=>{chartSelectedDay=Number(rect.dataset.day);renderMoneyChart();});
 }
 const MX_TAX_RATE=0.9;
@@ -1183,7 +1184,7 @@ function cardMonthDays(account,type){
 }
 function cardChartMarks(info,x,top,plotH){
   const marks=[];state.accounts.filter(account=>account.kind==='credit').forEach(account=>{[['cut','Corte','#b08a2e'],['due','Pago','#c94d45']].forEach(([type,word,color])=>cardMonthDays(account,type).forEach(d=>marks.push({d,text:`${word} ${account.name}`,color,title:`${type==='cut'?'Fecha de corte':'Fecha límite de pago'} · ${accountLabel(account.id)} · día ${d}`})));});
-  return marks.sort((a,b)=>a.d-b.d).map((mark,index)=>`<g class="card-mark"><line x1="${x(mark.d)}" y1="${top}" x2="${x(mark.d)}" y2="${top+plotH}" stroke="${mark.color}" stroke-width="1.4" stroke-dasharray="2 3" opacity=".9"/><text x="${x(mark.d)+4}" y="${top+chartFont()*2+(index%3)*chartFont(13)}" fill="${mark.color}" font-size="${chartFont(13)}" font-weight="700">${escapeHtml(mark.text)}</text><title>${escapeHtml(mark.title)}</title></g>`).join('');
+  return marks.sort((a,b)=>a.d-b.d).map((mark,index)=>`<g class="card-mark"><line x1="${x(mark.d)}" y1="${top}" x2="${x(mark.d)}" y2="${top+plotH}" stroke="${mark.color}" stroke-width="1.4" stroke-dasharray="2 3" opacity=".9"/><title>${escapeHtml(mark.title)}</title></g>`).join('');
 }
 function cardWhen(event){return event.daysLeft===0?'hoy':event.daysLeft===1?'mañana':`en ${event.daysLeft} días`;}
 function cardReminderMarkup(){
