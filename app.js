@@ -608,7 +608,7 @@ function syncMoneyChartControls(){
   if($('#chart-min')!==document.activeElement)$('#chart-min').value=prefs.min;
   if($('#chart-max')!==document.activeElement)$('#chart-max').value=prefs.max;
   $all('#chart-controls .balance-only').forEach(element=>element.hidden=prefs.view!=='balance');
-  const chips=$('#chart-include');if(chips){chips.hidden=prefs.view!=='balance';$all('#chart-include button').forEach(button=>{const on=button.dataset.include===prefs.include;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});}
+  const chips=$('#chart-include');if(chips){chips.hidden=prefs.view!=='balance';const estimate=$('#chart-estimate');if(estimate){const on=prefs.projection!=='off';estimate.classList.toggle('active',on);estimate.setAttribute('aria-pressed',String(on));estimate.textContent=on?'✓ Mostrar estimado':'Mostrar estimado';}$all('#chart-include button[data-include]').forEach(button=>{const on=button.dataset.include===prefs.include;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});}
   $all('#chart-controls .manual-only').forEach(element=>element.hidden=prefs.scale!=='manual');
 }
 function setupMoneyChartControls(){
@@ -620,7 +620,8 @@ function setupMoneyChartControls(){
     if(key==='group'||key==='view')prefs.hidden=[];
     save();syncMoneyChartControls();renderMoneyChart();
   }));
-  $all('#chart-include button').forEach(button=>button.onclick=()=>{const prefs=chartPrefs();prefs.include=button.dataset.include;prefs.hidden=[];chartSelectedDay=null;save();syncMoneyChartControls();renderMoneyChart();});
+  const estimate=$('#chart-estimate');if(estimate)estimate.onclick=()=>{const prefs=chartPrefs();prefs.projection=prefs.projection==='off'?'on':'off';save();syncMoneyChartControls();renderMoneyChart();};
+  $all('#chart-include button[data-include]').forEach(button=>button.onclick=()=>{const prefs=chartPrefs();prefs.include=button.dataset.include;prefs.hidden=[];chartSelectedDay=null;save();syncMoneyChartControls();renderMoneyChart();});
   syncMoneyChartControls();
 }
 function monthInfo(){
