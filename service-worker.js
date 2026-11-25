@@ -1,4 +1,4 @@
-const CACHE = 'claro-v41';
+const CACHE = 'claro-v42';
 const FILES = ['./', './index.html', './legal.html', './styles.css', './overrides.css', './guidance.css', './app.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './favicon-32.png'];
 // Descarga siempre la versión más nueva del servidor (sin usar la caché del navegador) y se activa de inmediato.
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES.map(file => new Request(file, {cache: 'reload'})))).then(() => self.skipWaiting())));
