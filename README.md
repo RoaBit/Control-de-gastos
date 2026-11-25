@@ -20,6 +20,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Sección «Cuentas» aparte para débito y crédito: saldo total, ingresos y gastos del mes, y una gráfica del saldo estimado de cada cuenta a 1, 3, 6 o 12 meses con tus planes recurrentes (los planes sin cuenta se cuentan en la cuenta que recibe tu ingreso). Las deudas se muestran con signo negativo.
 - Traspasos entre cuentas y pago real de la tarjeta («Pagar tarjeta o pasar entre cuentas»): no cuentan como gasto ni ingreso.
 - Si un movimiento es del mismo día (o antes) que el saldo registrado de la cuenta, la app pregunta si ya estaba incluido o si debe restarse, y recuerda la respuesta para esa cuenta.
+- En todas las gráficas de líneas puedes tocar un nombre de la leyenda para ocultar o mostrar esa línea; la explicación de cada gráfica está en su «?».
 - Gastos por categoría de hoy, esta semana, esta quincena, este mes o este año.
 - Plan recurrente para pagar el total de la tarjeta: el monto es lo que debes al corte y el pago queda entre el corte y la fecha límite.
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
