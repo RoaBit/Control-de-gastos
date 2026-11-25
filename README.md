@@ -17,14 +17,14 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Planes semanales, quincenales, mensuales o anuales y estimaciones separadas de movimientos reales.
 - Tarjetas de crédito con fecha de corte y fecha límite de pago: avisos configurables (días de anticipación), aviso en el Resumen, en Recordatorios y como notificación, y marcas en la gráfica del mes.
 - Presupuestos por categoría, metas de ahorro y recordatorios (pueden repetirse cada día, semana, quincena, mes o año). La gráfica de Límites resta del dinero disponible tus gastos recurrentes (renta, suscripciones) y tus límites; si un límite y un gasto recurrente tienen el mismo nombre, solo cuenta el límite.
-- Capital inicial agregado por cuenta e inversión, con un desglose de cada cuenta.
+- Sección «Cuentas» aparte para débito y crédito: saldo de cada cuenta, crédito disponible de cada tarjeta y una gráfica de su saldo estimado a 1, 3, 6 o 12 meses. Las deudas se muestran con signo negativo.
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
-- Gráfica de proyección en días, meses o años con una línea por producto y una línea total destacada.
+- Gráfica de proyección de inversiones (solo inversiones, sin cuentas de débito ni crédito) en días, meses o años, con una línea por producto, una línea total y una tabla con el valor de cada inversión.
 - Tope opcional a las aportaciones de capital; el excedente de aportaciones planeadas puede redirigirse a otra inversión.
 - Metas con origen y destino: el ahorro sale de una cuenta (por ejemplo, la nómina) y se guarda en una cuenta de débito o en una inversión; su saldo cuenta como avance. También se pueden vincular a una inversión, a sus intereses estimados o al portafolio completo; el vínculo solo muestra progreso, no aparta dinero.
 - Tasas fijas o variables, capitalización, impuestos, comisiones y registro de aportaciones/retiros.
 - Exportación e importación de respaldo en JSON, con un aviso en el inicio si llevas más de 14 días sin descargar uno.
-- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se puede ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
+- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total; se puede ver por día, semana, quincena, mes o año, y ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
 - Movimientos, planes recurrentes (por ejemplo, la nómina) e inversiones conectables a una cuenta de banco. Después de hoy, la gráfica principal muestra con línea punteada un estimado del saldo con esos planes.
 - Aportaciones futuras de una inversión en una sola opción: ninguna, monto fijo mensual o apartar de un ingreso recurrente.
 - Inversiones que se pagan con un ingreso recurrente y proyección a 1 año por defecto.
