@@ -48,3 +48,5 @@ body[data-theme="dark"] .update-banner{background:#e6efeb;color:#101a18}
 .legal-card p{color:var(--ink)}.legal-updated{color:var(--ink);opacity:.8}
 body[data-theme="dark"] .toast{background:#e6efeb;color:#101a18;box-shadow:0 8px 24px #0008}
 body[data-theme="dark"] .reminder-date{color:#8fd8c4}
+.stat-card.total-balance{grid-column:1/-1}.stat-card.total-balance strong{font-size:34px}.stat-card.total-balance small{color:#d9ece6}.stat-card.month-net{background:var(--card);border-color:var(--line);color:var(--ink)}
+.backup-reminder{margin-top:16px}

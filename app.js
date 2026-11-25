@@ -196,7 +196,7 @@ function renderInvestmentPortfolio(metrics,invested,portfolio){
 }
 function frequencyLabel(value){return{daily:'Diaria',weekly:'Semanal',biweekly:'Quincenal',monthly:'Mensual',quarterly:'Trimestral',yearly:'Anual'}[value]||'Mensual';}
 function populateCategories(){ const select=$('#movement-category'); const type=$('#movement-type').value; select.innerHTML=CATEGORIES[type].map(c=>`<option>${c}</option>`).join(''); $all('.expense-categories').forEach(s=>s.innerHTML=CATEGORIES.expense.map(c=>`<option>${c}</option>`).join('')); const filter=$('#movement-category-filter'); const existing=filter.value; filter.innerHTML='<option value="all">Todas las categorías</option>'+[...new Set(state.movements.map(m=>m.category))].sort().map(c=>`<option>${c}</option>`).join(''); filter.value=existing; }
-function renderAll(){ populateCategories(); renderDashboard();renderBackupReminder();renderCardAlerts();renderMovements();renderGoals();renderReminders();renderCapital(); }
+function renderAll(){ populateCategories(); renderDashboard();renderTotalBalance();renderBackupReminder();renderCardAlerts();renderMovements();renderGoals();renderReminders();renderCapital(); }
 function open(id){ $(id).showModal(); }
 function editBudget(budgetId){const budget=state.budgets.find(item=>item.id===budgetId);if(!budget)return;editingBudgetId=budgetId;const form=$('#budget-form');form.reset();form.elements.budgetId.value=budgetId;form.elements.category.value=budget.category;form.elements.kind.value=budget.kind||'variable';form.elements.period.value=budget.period||'monthly';form.elements.limit.value=budget.limit;$('#budget-dialog h2').textContent=`Editar límite · ${budget.category}`;$('#budget-form .submit-button').textContent='Guardar cambios';open('#budget-dialog');}
 function editGoal(goalId){const goal=state.goals.find(item=>item.id===goalId);if(!goal)return;editingGoalId=goalId;const form=$('#goal-form');form.reset();form.elements.goalId.value=goalId;form.elements.name.value=goal.name;form.elements.target.value=goal.target;form.elements.current.value=goal.current;form.elements.linkType.value=goal.linkType||'none';populateGoalInvestmentChoices(goal.investmentId||'');populateGoalAccountChoices(goal.accountId||'');populateGoalOriginChoices(goal.originAccountId||'');if(form.elements.investmentId)form.elements.investmentId.value=goal.investmentId||'';syncGoalLink();$('#goal-dialog h2').textContent='Editar meta';$('#goal-form .submit-button').textContent='Guardar cambios';open('#goal-dialog');}
@@ -655,10 +655,11 @@ function syncTaxPreset(){
 function applyFriendlyHelp(){
   $all('.help-bubble,.help-popover').forEach(node=>node.remove());
   const field=(formSelector,name)=>$(formSelector)?.elements[name]?.closest('label');
-  const statLabel=index=>$all('.stat-card p')[index];
+  const statLabel=index=>$all('.stat-card:not(.total-balance) p')[index];
   const settingsLabel=id=>$(id)?.closest('.settings-row')?.querySelector('span');
   const entries=[
     // Resumen
+    [$('.total-balance p'),'Todo tu dinero en cuentas hoy: la suma de tus cuentas de débito y ahorro, menos lo que debes en tus tarjetas de crédito. Las inversiones se muestran aparte.'],
     [statLabel(0),'Tus ingresos del mes menos tus gastos del mes. No incluye el saldo que ya tenías en tus cuentas ni tus inversiones.'],
     [statLabel(1),'Todo el dinero que recibiste este mes: sueldo, ventas, regalos y otros ingresos.'],
     [statLabel(2),'El total de tus gastos de este mes.'],
@@ -925,7 +926,7 @@ function setupOverlapWarnings(){
 /* Aviso para descargar el respaldo: los datos solo viven en este dispositivo */
 function renderBackupReminder(){
   let box=$('#backup-reminder');
-  if(!box){$('#inicio').insertAdjacentHTML('afterbegin','<div class="backup-reminder" id="backup-reminder" role="status" hidden><span id="backup-reminder-text"></span><span class="button-pair"><button type="button" class="small-button primary-small" id="backup-reminder-download">Descargar respaldo</button><button type="button" class="small-button" id="backup-reminder-later">Después</button></span></div>');box=$('#backup-reminder');$('#backup-reminder-download').onclick=()=>$('#export-button').click();$('#backup-reminder-later').onclick=()=>{state.preferences.backupSnooze=iso(new Date());save();box.hidden=true;};}
+  if(!box){$('#inicio .stat-grid').insertAdjacentHTML('afterend','<div class="backup-reminder" id="backup-reminder" role="status" hidden><span id="backup-reminder-text"></span><span class="button-pair"><button type="button" class="small-button primary-small" id="backup-reminder-download">Descargar respaldo</button><button type="button" class="small-button" id="backup-reminder-later">Después</button></span></div>');box=$('#backup-reminder');$('#backup-reminder-download').onclick=()=>$('#export-button').click();$('#backup-reminder-later').onclick=()=>{state.preferences.backupSnooze=iso(new Date());save();box.hidden=true;};}
   const count=state.movements.length+state.accounts.length+state.investments.length+state.recurringPlans.length+state.budgets.length+state.goals.length;
   const days=value=>value?Math.floor((new Date(`${iso(new Date())}T12:00:00`)-new Date(`${value}T12:00:00`))/86400000):Infinity;
   const last=days(state.preferences.lastBackup),snoozed=days(state.preferences.backupSnooze)<3;
@@ -1031,12 +1032,24 @@ function cardReminderMarkup(){
   return cardEvents().map(event=>`<article class="reminder-item card-reminder"><span class="category-icon">${event.type==='due'?'$':'✂'}</span><h3 style="margin-top:13px">${event.label} · ${escapeHtml(accountLabel(event.account.id))}</h3><p class="reminder-date">${displayDate(event.date)} (${cardWhen(event)}) · Tarjeta de crédito · ${event.alert?(event.alertDays?`aviso ${event.alertDays} ${event.alertDays===1?'día':'días'} antes`:'aviso el mismo día'):'sin aviso'}</p>${event.type==='due'?`<p class="goal-link-note">Debes hoy ${money.format(Math.max(0,-accountBalanceToday(event.account)))}</p>`:''}<div class="goal-actions"><button type="button" class="small-button config-card" data-id="${event.account.id}">Configurar tarjeta</button></div></article>`).join('');
 }
 function renderCardAlerts(){
-  let box=$('#card-alerts');if(!box){$('#inicio').insertAdjacentHTML('afterbegin','<div class="backup-reminder card-alerts" id="card-alerts" role="status" hidden></div>');box=$('#card-alerts');}
+  let box=$('#card-alerts');if(!box){$('#inicio .stat-grid').insertAdjacentHTML('afterend','<div class="backup-reminder card-alerts" id="card-alerts" role="status" hidden></div>');box=$('#card-alerts');}
   const due=cardEvents().filter(event=>event.alert&&event.daysLeft<=event.alertDays);
   box.hidden=!due.length;
   box.innerHTML=due.map(event=>`<span>💳 <strong>${escapeHtml(accountLabel(event.account.id))}</strong>: ${event.label.toLowerCase()} ${cardWhen(event)} (${displayDate(event.date)})${event.type==='due'?` · debes ${money.format(Math.max(0,-accountBalanceToday(event.account)))}`:''}.</span>`).join('<br />');
 }
 function cardFootnote(){const parts=[];state.accounts.filter(account=>account.kind==='credit').forEach(account=>{const items=[account.cutDay?`corte el día ${cardMonthDates(account,account.cutDay)}`:'',account.dueDay?`pago límite el día ${cardMonthDates(account,account.dueDay)}`:''].filter(Boolean);if(items.length)parts.push(`${accountLabel(account.id)}: ${items.join(' y ')}`);});return parts.length?`Líneas punteadas de color: fechas de tus tarjetas (${parts.join('; ')}).`:'';}
+/* Saldo total de hoy: lo primero que se ve en el Resumen */
+function renderTotalBalance(){
+  const debit=state.accounts.filter(account=>account.kind!=='credit'),credit=state.accounts.filter(account=>account.kind==='credit');
+  const have=debit.reduce((sum,account)=>sum+accountBalanceToday(account),0),owe=credit.reduce((sum,account)=>sum+Math.max(0,-accountBalanceToday(account)),0),creditPlus=credit.reduce((sum,account)=>sum+Math.max(0,accountBalanceToday(account)),0);
+  const total=have+creditPlus-owe,invested=state.investments.reduce((sum,investment)=>sum+investmentMetrics(investment).value,0);
+  $('#total-balance-value').textContent=money.format(total);
+  const parts=[];
+  if(!state.accounts.length)parts.push('Agrega tus cuentas en Inversiones → Cuentas para ver aquí tu saldo.');
+  else{parts.push(`En tus cuentas: ${money.format(have)}`);if(credit.length)parts.push(`debes en tarjetas: ${money.format(owe)}`);}
+  if(invested)parts.push(`inversiones aparte: ${money.format(invested)}`);
+  $('#total-balance-note').textContent=parts.join(' · ');
+}
 setup();
 setupTutorial();
 setupReminderRepeat();
