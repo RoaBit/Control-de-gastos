@@ -666,7 +666,7 @@ function applyFriendlyHelp(){
     [field('#account-form','kind'),'Débito o ahorro: una cuenta donde tienes tu dinero. Tarjeta de crédito: dinero que el banco te presta; lo que gastes con ella aumenta tu deuda y lo que pagues la reduce.'],
     [field('#account-form','initialBalance'),'Débito: cuánto dinero hay en la cuenta. Crédito: cuánto debes hoy en la tarjeta. Es tu punto de partida: no se cuenta como ingreso ni como gasto.'],
     [field('#account-form','creditLimit'),'El monto máximo que el banco te permite gastar con la tarjeta. Sirve para mostrarte cuánto crédito tienes disponible.'],
-    [$('#budget-sources-card .card-title'),'Elige de dónde sale el dinero que tienes para gastar al mes: tu nómina, el saldo de una cuenta, una inversión o solo sus intereses. El círculo muestra cuánto de ese dinero ya apartaste con tus límites y cuánto te queda libre.'],
+    [$('#budget-sources-card .card-title'),'Elige de dónde sale el dinero que tienes para gastar al mes: tu nómina, el saldo de una cuenta, una inversión o solo sus intereses. El círculo muestra cuánto ocupan tus gastos recurrentes (en gris, como la renta o tus suscripciones), cuánto apartaste con tus límites y cuánto te queda libre. Si un límite tiene el mismo nombre que un gasto recurrente, solo se cuenta el límite.'],
     [$('#account-has-yield')?.closest('label'),'Márcalo si tu banco te paga intereses por tener dinero en esta cuenta (por ejemplo, una cuenta de débito que da 10% anual). La gráfica del resumen sumará esos intereses al saldo.'],
     [field('#account-form','yieldRate'),'El porcentaje al año que te paga la cuenta. Ejemplo: con 10%, por cada $10,000 ganarías unos $1,000 en un año, antes de impuestos.'],
     [field('#account-form','yieldFrequency'),'Con qué frecuencia te depositan los intereses. Si no lo sabes, elige «Cada día»; muchas cuentas digitales pagan diariamente.'],
@@ -815,21 +815,45 @@ function selectedBudgetSources(options){
   const incomes=options.filter(option=>option.key.startsWith('plan-'));
   return new Set((incomes.length?incomes:options.filter(option=>option.key.startsWith('account-'))).map(option=>option.key));
 }
+/* Fechas de un plan dentro del mes actual (para saber si ya se pagó o está por pagarse) */
+function planDatesThisMonth(plan){
+  const first=new Date(today.getFullYear(),today.getMonth(),1,12),last=new Date(today.getFullYear(),today.getMonth()+1,0,12),max=Number(plan.occurrences)>0?Number(plan.occurrences):Infinity,dates=[];
+  let date=new Date(`${plan.startDate}T12:00:00`),index=0,guard=0;
+  while(date<=last&&index<max&&guard++<5000){if(date>=first)dates.push(iso(date));date=nextOccurrence(date,plan.frequency);index++;}
+  return dates;
+}
+function planIsActive(plan){
+  if(!(Number(plan.occurrences)>0))return true;
+  return planDatesThisMonth(plan).length>0||countPlanTo(plan,addMonthsClamped(today,12))>0;
+}
+/* Gastos recurrentes que ocupan parte del dinero del mes. Si un límite tiene el mismo nombre, el límite ya los incluye. */
+function recurringExpenseSlices(){
+  return state.recurringPlans.filter(plan=>plan.type==='expense'&&planIsActive(plan)&&!overlapBudget(plan.title)).map(plan=>{
+    const dates=planDatesThisMonth(plan),todayIso=iso(today),paid=dates.filter(date=>date<=todayIso),pending=dates.filter(date=>date>todayIso);
+    const status=!dates.length?'no toca este mes':pending.length?`próximo pago: ${displayDate(pending[0])}${paid.length?` · ya pasó ${paid.length===1?'un pago':`${paid.length} pagos`}`:''}`:`ya se pagó este mes (${displayDate(paid[paid.length-1])})`;
+    return {label:plan.title,value:Number(plan.amount)*monthlyFactor(plan.frequency),status,recurring:true};
+  });
+}
 function renderBudgetPie(){
   const options=budgetSourceOptions(),selected=selectedBudgetSources(options),available=options.filter(option=>selected.has(option.key)).reduce((sum,option)=>sum+option.value,0);
-  const limits=state.budgets.map((budget,index)=>({label:budget.category,value:budgetMonthly(budget),spent:budgetSpent(budget),period:budget.period||'monthly',color:COLORS[index%COLORS.length]}));
-  const assigned=limits.reduce((sum,item)=>sum+item.value,0),free=Math.max(0,available-assigned),base=Math.max(available,assigned);
-  let running=0;const parts=[...limits.filter(item=>item.value>0),...(free>0?[{label:'Libre',value:free,color:'#dbe4df'}]:[])];
+  const RECURRING_COLORS=['#8a9a94','#a3b1ab','#6f817a','#b8c4bf'];
+  const recurring=recurringExpenseSlices().map((item,index)=>({...item,color:RECURRING_COLORS[index%RECURRING_COLORS.length]}));
+  const limits=state.budgets.map((budget,index)=>({label:budget.category,value:budgetMonthly(budget),spent:budgetSpent(budget),period:budget.period||'monthly',color:COLORS[index%COLORS.length],covers:overlapPlans(budget.category)}));
+  const fixed=recurring.reduce((sum,item)=>sum+item.value,0),limited=limits.reduce((sum,item)=>sum+item.value,0),assigned=fixed+limited,free=Math.max(0,available-assigned),base=Math.max(available,assigned);
+  let running=0;const parts=[...recurring.filter(item=>item.value>0),...limits.filter(item=>item.value>0),...(free>0?[{label:'Libre',value:free,color:'#dbe4df'}]:[])];
   const slices=parts.map(item=>{const start=running;running+=item.value/base*100;return `${item.color} ${start}% ${running}%`;});
   $('#budget-pie').style.background=base>0?`conic-gradient(${slices.join(',')})`:'#e9eeea';
   $('#budget-pie-total').textContent=money.format(available);
-  $('#budget-pie').setAttribute('aria-label',`Disponible ${money.format(available)} al mes; límites ${money.format(assigned)}.`);
+  $('#budget-pie').setAttribute('aria-label',`Disponible ${money.format(available)} al mes; gastos recurrentes ${money.format(fixed)}; límites ${money.format(limited)}.`);
   const note=$('#budget-pie-note');note.classList.toggle('warn',assigned>available&&available>0);
   const doubled=options.filter(option=>selected.has(option.key)&&option.key.startsWith('plan-')).some(option=>{const plan=state.recurringPlans.find(item=>`plan-${item.id}`===option.key);return plan?.accountId&&selected.has(`account-${plan.accountId}`);});
   $('#budget-sources-warning').hidden=!doubled;
-  note.textContent=!available?'Elige abajo de dónde sale tu dinero.':assigned>available?`Tus límites suman ${money.format(assigned)} al mes: ${money.format(assigned-available)} más de lo que tienes disponible.`:`Te quedan ${money.format(free)} libres al mes después de tus límites.`;
+  const what=fixed&&limited?'tus gastos recurrentes y tus límites':fixed?'tus gastos recurrentes':'tus límites';
+  note.textContent=!available?'Elige abajo de dónde sale tu dinero.':assigned>available?`Entre ${what} suman ${money.format(assigned)} al mes: ${money.format(assigned-available)} más de lo que tienes disponible.`:assigned?`Te quedan ${money.format(free)} libres al mes después de ${what}.`:`Tienes ${money.format(available)} libres al mes.`;
   const periodName={weekly:'esta semana',monthly:'este mes',yearly:'este año'};
-  $('#budget-pie-legend').innerHTML=(limits.length?limits.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · ${money.format(item.value)} al mes · gastado ${periodName[item.period]||'este mes'}: ${money.format(item.spent)}</span>`).join(''):'<span class="legend-item">Aún no tienes límites. Crea uno con «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
+  const recurringLegend=recurring.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · gasto recurrente · ${money.format(item.value)} al mes · ${item.status}</span>`).join('');
+  const limitLegend=limits.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · límite · ${money.format(item.value)} al mes · gastado ${periodName[item.period]||'este mes'}: ${money.format(item.spent)}${item.covers.length?` · ya incluye tu gasto recurrente «${escapeHtml(item.covers[0].title)}»`:''}</span>`).join('');
+  $('#budget-pie-legend').innerHTML=(recurring.length||limits.length?recurringLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
   const groups=[...new Set(options.map(option=>option.group))];
   $('#budget-sources-list').innerHTML=options.length?groups.map(group=>`<h4>${escapeHtml(group.toUpperCase())}</h4>${options.filter(option=>option.group===group).map(option=>`<label class="check-label"><input type="checkbox" data-source="${option.key}" ${selected.has(option.key)?'checked':''} /> ${escapeHtml(option.label)} · ${money.format(option.value)}</label>`).join('')}`).join(''):'<p class="empty">Agrega un ingreso recurrente (como tu nómina), una cuenta o una inversión para calcular tu dinero disponible.</p>';
   $all('#budget-sources-list input[data-source]').forEach(input=>input.onchange=()=>{state.preferences.budgetSources=$all('#budget-sources-list input[data-source]:checked').map(box=>box.dataset.source);save();renderBudgetPie();});
