@@ -1033,10 +1033,19 @@ function renderBudgetPie(){
   const recurring=recurringExpenseSlices().map((item,index)=>({...item,color:RECURRING_COLORS[index%RECURRING_COLORS.length]}));
   const SAVING_COLORS=['#5b8fc9','#7aa7d8','#4677ad','#9bbde3'],saving=savingSlices().map((item,index)=>({...item,color:SAVING_COLORS[index%SAVING_COLORS.length]})),saved=saving.reduce((sum,item)=>sum+item.value,0);
   const limits=state.budgets.map((budget,index)=>({label:budget.category,value:budgetMonthly(budget),spent:budgetSpent(budget),period:budget.period||'monthly',color:COLORS[index%COLORS.length],covers:overlapPlans(budget.category)}));
-  const fixed=recurring.reduce((sum,item)=>sum+item.value,0),limited=limits.reduce((sum,item)=>sum+item.value,0),assigned=fixed+limited+saved,free=Math.max(0,available-assigned),base=Math.max(available,assigned);
+  const fixed=recurring.reduce((sum,item)=>sum+item.value,0),limited=limits.reduce((sum,item)=>sum+item.value,0),assigned=fixed+limited+saved,free=Math.max(0,available-assigned);
+  // Crédito disponible de tus tarjetas (límite menos lo que debes): se dibuja aparte, con contorno rojo y rayas, porque si lo usas es deuda.
+  const cards=state.accounts.filter(account=>account.kind==='credit'&&Number(account.creditLimit)>0),credit=cards.reduce((sum,account)=>sum+Math.max(0,Number(account.creditLimit)+accountBalanceToday(account)),0);
+  const base=Math.max(available,assigned)+credit;
   let running=0;const parts=[...recurring.filter(item=>item.value>0),...saving,...limits.filter(item=>item.value>0),...(free>0?[{label:'Libre',value:free,color:'#dbe4df'}]:[])];
   const slices=parts.map(item=>{const start=running;running+=item.value/base*100;return `${item.color} ${start}% ${running}%`;});
+  if(credit>0)slices.push(`transparent ${running}% 100%`);
   $('#budget-pie').style.background=base>0?`conic-gradient(${slices.join(',')})`:'#e9eeea';
+  $('#budget-pie').querySelector('.credit-arc')?.remove();
+  if(credit>0&&base>0){
+    const start=running/100*2*Math.PI,end=2*Math.PI-0.0001,R=49,r=31.5,pt=(radius,angle)=>`${(50+radius*Math.sin(angle)).toFixed(3)} ${(50-radius*Math.cos(angle)).toFixed(3)}`,large=end-start>Math.PI?1:0;
+    $('#budget-pie').insertAdjacentHTML('afterbegin',`<svg class="credit-arc" viewBox="0 0 100 100" aria-hidden="true"><defs><pattern id="credit-stripes" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" class="credit-stripes-bg"/><line x1="0" y1="0" x2="0" y2="4" stroke="#d64545" stroke-width="1.4"/></pattern></defs><path d="M ${pt(R,start)} A ${R} ${R} 0 ${large} 1 ${pt(R,end)} L ${pt(r,end)} A ${r} ${r} 0 ${large} 0 ${pt(r,start)} Z" fill="url(#credit-stripes)" stroke="#d64545" stroke-width="1.6" stroke-linejoin="round"/></svg>`);
+  }
   $('#budget-pie-total').textContent=money.format(available);
   $('#budget-pie').setAttribute('aria-label',`Disponible ${money.format(available)} al mes; gastos recurrentes ${money.format(fixed)}; ahorro e inversión ${money.format(saved)}; límites ${money.format(limited)}.`);
   const note=$('#budget-pie-note');note.classList.toggle('warn',assigned>available&&available>0);
@@ -1046,11 +1055,13 @@ function renderBudgetPie(){
   const sourceNames=options.filter(option=>selected.has(option.key)).map(option=>option.key.startsWith('plan-')?state.recurringPlans.find(plan=>`plan-${plan.id}`===option.key)?.title||option.label:option.label);
   note.textContent=!available?'Elige abajo de dónde sale tu dinero.':assigned>available?`Entre ${what} suman ${money.format(assigned)} al mes: ${money.format(assigned-available)} más de lo que tienes disponible.`:assigned?`Te quedan ${money.format(free)} libres al mes después de ${what}.`:`Tienes ${money.format(available)} libres al mes.`;
   if(available)note.textContent=`Disponible al mes: ${sourceNames.join(' + ')} = ${money.format(available)}. `+note.textContent;
+  if(credit>0)note.textContent+=` Además tienes ${money.format(credit)} de crédito disponible en tus tarjetas (la parte con rayas rojas); no se suma a tu dinero porque si lo usas es deuda.`;
   const periodName={weekly:'esta semana',monthly:'este mes',yearly:'este año'};
   const recurringLegend=recurring.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · gasto recurrente · ${money.format(item.value)} al mes · ${item.status}</span>`).join('');
+  const creditLegend=credit>0?`<span class="legend-item"><i class="legend-dot credit-dot"></i><strong>Crédito disponible</strong> · ${money.format(credit)} en ${cards.length===1?escapeHtml(accountLabel(cards[0].id)):`${cards.length} tarjetas`} · no es dinero tuyo: si lo usas, se vuelve deuda</span>`:'';
   const savingLegend=saving.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · ahorro o inversión · ${money.format(item.value)} al mes</span>`).join('');
   const limitLegend=limits.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · límite · ${money.format(item.value)} al mes · gastado ${periodName[item.period]||'este mes'}: ${money.format(item.spent)}${item.covers.length?` · ya incluye tu gasto recurrente «${escapeHtml(item.covers[0].title)}»`:''}</span>`).join('');
-  $('#budget-pie-legend').innerHTML=(recurring.length||limits.length||saving.length?recurringLegend+savingLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
+  $('#budget-pie-legend').innerHTML=(recurring.length||limits.length||saving.length?recurringLegend+savingLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'')+creditLegend;
   const groups=[...new Set(options.map(option=>option.group))];
   $('#budget-sources-list').innerHTML=options.length?groups.map(group=>`<h4>${escapeHtml(group.toUpperCase())}</h4>${options.filter(option=>option.group===group).map(option=>`<label class="check-label"><input type="checkbox" data-source="${option.key}" ${selected.has(option.key)?'checked':''} /> ${escapeHtml(option.label)} · ${money.format(option.value)}</label>`).join('')}`).join(''):'<p class="empty">Agrega un ingreso recurrente (como tu nómina), una cuenta o una inversión para calcular tu dinero disponible.</p>';
   $all('#budget-sources-list input[data-source]').forEach(input=>input.onchange=()=>{state.preferences.budgetSources=$all('#budget-sources-list input[data-source]:checked').map(box=>box.dataset.source);state.preferences.budgetSourcesKnown=options.map(option=>option.key);save();renderBudgetPie();});

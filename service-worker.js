@@ -1,17 +1,18 @@
-const CACHE = 'claro-v43';
+const CACHE = 'claro-v44';
 const FILES = ['./', './index.html', './legal.html', './styles.css', './overrides.css', './guidance.css', './app.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './favicon-32.png'];
-// Descarga siempre la versión más nueva del servidor (sin usar la caché del navegador) y se activa de inmediato.
+// Al instalar una versión, descarga todos sus archivos del servidor (sin usar la caché del navegador) y se activa de inmediato.
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES.map(file => new Request(file, {cache: 'reload'})))).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('claro-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('message', event => { if (event.data === 'SKIP_WAITING') self.skipWaiting(); });
-// Primero la red (para ver siempre lo último); si no hay internet, se usa la copia guardada.
+// La app abre al instante con la copia guardada de esta versión (aunque la señal sea débil o no haya internet).
+// Las versiones nuevas llegan completas: al publicar, este archivo cambia, el teléfono descarga todos los archivos nuevos
+// a la vez, y la app se recarga sola con ellos. Así nunca se mezclan archivos viejos y nuevos.
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(request, {cache: 'no-cache'}).then(response => {
-    if (response && response.ok) { const copy = response.clone(); caches.open(CACHE).then(cache => cache.put(request, copy)); }
-    return response;
-  }).catch(() => caches.match(request, {ignoreSearch: request.mode === 'navigate'}).then(found => found || (request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))));
+  event.respondWith(caches.open(CACHE)
+    .then(cache => cache.match(request, {ignoreSearch: true}).then(found => found || (request.mode === 'navigate' ? cache.match('./index.html') : undefined)))
+    .then(found => found || fetch(request).catch(() => Response.error())));
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();
