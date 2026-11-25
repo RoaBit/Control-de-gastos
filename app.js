@@ -828,7 +828,12 @@ function budgetSourceOptions(){
   return options;
 }
 function selectedBudgetSources(options){
-  if(Array.isArray(state.preferences.budgetSources))return new Set(state.preferences.budgetSources);
+  if(Array.isArray(state.preferences.budgetSources)){
+    // Los ingresos recurrentes nuevos se suman solos; solo se excluyen los que desmarcaste.
+    const known=Array.isArray(state.preferences.budgetSourcesKnown)?new Set(state.preferences.budgetSourcesKnown):new Set(),chosen=new Set(state.preferences.budgetSources);
+    options.filter(option=>option.key.startsWith('plan-')&&!known.has(option.key)).forEach(option=>{chosen.add(option.key);const plan=state.recurringPlans.find(item=>`plan-${item.id}`===option.key);if(plan?.accountId)chosen.delete(`account-${plan.accountId}`);});
+    return chosen;
+  }
   const incomes=options.filter(option=>option.key.startsWith('plan-'));
   return new Set((incomes.length?incomes:options.filter(option=>option.key.startsWith('account-'))).map(option=>option.key));
 }
@@ -866,14 +871,16 @@ function renderBudgetPie(){
   const doubled=options.filter(option=>selected.has(option.key)&&option.key.startsWith('plan-')).some(option=>{const plan=state.recurringPlans.find(item=>`plan-${item.id}`===option.key);return plan?.accountId&&selected.has(`account-${plan.accountId}`);});
   $('#budget-sources-warning').hidden=!doubled;
   const what=fixed&&limited?'tus gastos recurrentes y tus límites':fixed?'tus gastos recurrentes':'tus límites';
+  const sourceNames=options.filter(option=>selected.has(option.key)).map(option=>option.key.startsWith('plan-')?state.recurringPlans.find(plan=>`plan-${plan.id}`===option.key)?.title||option.label:option.label);
   note.textContent=!available?'Elige abajo de dónde sale tu dinero.':assigned>available?`Entre ${what} suman ${money.format(assigned)} al mes: ${money.format(assigned-available)} más de lo que tienes disponible.`:assigned?`Te quedan ${money.format(free)} libres al mes después de ${what}.`:`Tienes ${money.format(available)} libres al mes.`;
+  if(available)note.textContent=`Disponible al mes: ${sourceNames.join(' + ')} = ${money.format(available)}. `+note.textContent;
   const periodName={weekly:'esta semana',monthly:'este mes',yearly:'este año'};
   const recurringLegend=recurring.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · gasto recurrente · ${money.format(item.value)} al mes · ${item.status}</span>`).join('');
   const limitLegend=limits.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · límite · ${money.format(item.value)} al mes · gastado ${periodName[item.period]||'este mes'}: ${money.format(item.spent)}${item.covers.length?` · ya incluye tu gasto recurrente «${escapeHtml(item.covers[0].title)}»`:''}</span>`).join('');
   $('#budget-pie-legend').innerHTML=(recurring.length||limits.length?recurringLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
   const groups=[...new Set(options.map(option=>option.group))];
   $('#budget-sources-list').innerHTML=options.length?groups.map(group=>`<h4>${escapeHtml(group.toUpperCase())}</h4>${options.filter(option=>option.group===group).map(option=>`<label class="check-label"><input type="checkbox" data-source="${option.key}" ${selected.has(option.key)?'checked':''} /> ${escapeHtml(option.label)} · ${money.format(option.value)}</label>`).join('')}`).join(''):'<p class="empty">Agrega un ingreso recurrente (como tu nómina), una cuenta o una inversión para calcular tu dinero disponible.</p>';
-  $all('#budget-sources-list input[data-source]').forEach(input=>input.onchange=()=>{state.preferences.budgetSources=$all('#budget-sources-list input[data-source]:checked').map(box=>box.dataset.source);save();renderBudgetPie();});
+  $all('#budget-sources-list input[data-source]').forEach(input=>input.onchange=()=>{state.preferences.budgetSources=$all('#budget-sources-list input[data-source]:checked').map(box=>box.dataset.source);state.preferences.budgetSourcesKnown=options.map(option=>option.key);save();renderBudgetPie();});
 }
 /* Proyección de Presupuestos: usa todo lo de la pestaña; los límites cuentan como gasto completo */
 function renderBudgetProjection(){
