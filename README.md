@@ -15,6 +15,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Panel con saldo, categorías, flujo mensual y movimientos recientes.
 - Gráfica real de ingresos, gastos y neto; excluye aportaciones para no confundir capital con gasto.
 - Planes semanales, quincenales, mensuales o anuales y estimaciones separadas de movimientos reales.
+- Tarjetas de crédito con fecha de corte y fecha límite de pago: avisos configurables (días de anticipación), aviso en el Resumen, en Recordatorios y como notificación, y marcas en la gráfica del mes.
 - Presupuestos por categoría, metas de ahorro y recordatorios (pueden repetirse cada día, semana, quincena, mes o año). La gráfica de Límites resta del dinero disponible tus gastos recurrentes (renta, suscripciones) y tus límites; si un límite y un gasto recurrente tienen el mismo nombre, solo cuenta el límite.
 - Capital inicial agregado por cuenta e inversión, con un desglose de cada cuenta.
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
