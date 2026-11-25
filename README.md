@@ -18,6 +18,8 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Tarjetas de crédito con día de corte, días para pagar después del corte (la fecha límite puede caer en el mes siguiente) y límite de crédito: avisos configurables (días de anticipación), aviso en el Resumen, en Recordatorios y como notificación, y marcas en la gráfica del mes.
 - Presupuestos por categoría, metas de ahorro y recordatorios (pueden repetirse cada día, semana, quincena, mes o año). La gráfica de Límites resta del dinero disponible tus gastos recurrentes (renta, suscripciones) y tus límites; si un límite y un gasto recurrente tienen el mismo nombre, solo cuenta el límite.
 - Sección «Cuentas» aparte para débito y crédito: saldo total, ingresos y gastos del mes, y una gráfica del saldo estimado de cada cuenta a 1, 3, 6 o 12 meses con tus planes recurrentes (los planes sin cuenta se cuentan en la cuenta que recibe tu ingreso). Las deudas se muestran con signo negativo.
+- Traspasos entre cuentas y pago real de la tarjeta («Pagar tarjeta o pasar entre cuentas»): no cuentan como gasto ni ingreso.
+- Si un movimiento es del mismo día (o antes) que el saldo registrado de la cuenta, la app pregunta si ya estaba incluido o si debe restarse, y recuerda la respuesta para esa cuenta.
 - Gastos por categoría de hoy, esta semana, esta quincena, este mes o este año.
 - Plan recurrente para pagar el total de la tarjeta: el monto es lo que debes al corte y el pago queda entre el corte y la fecha límite.
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
@@ -26,7 +28,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Metas con origen y destino: el ahorro sale de una cuenta (por ejemplo, la nómina) y se guarda en una cuenta de débito o en una inversión; su saldo cuenta como avance. También se pueden vincular a una inversión, a sus intereses estimados o al portafolio completo; el vínculo solo muestra progreso, no aparta dinero.
 - Tasas fijas o variables, capitalización, impuestos, comisiones y registro de aportaciones/retiros.
 - Exportación e importación de respaldo en JSON, con un aviso en el inicio si llevas más de 14 días sin descargar uno.
-- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se puede elegir Todo, Solo cuentas o Solo inversiones, ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
+- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se pueden combinar libremente cuentas, inversiones, total, ingresos, gastos, neto y el estimado, y ajustar y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
 - Movimientos, planes recurrentes (por ejemplo, la nómina) e inversiones conectables a una cuenta de banco. Después de hoy, la gráfica principal muestra con línea punteada un estimado del saldo con esos planes.
 - Aportaciones futuras de una inversión en una sola opción: ninguna, monto fijo mensual o apartar de un ingreso recurrente.
 - Inversiones que se pagan con un ingreso recurrente y proyección a 1 año por defecto.

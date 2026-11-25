@@ -1,10 +1,11 @@
 const CATEGORIES = {
   expense: ['Comida', 'Casa', 'Renta', 'Salidas', 'Transporte', 'Salud', 'Personales', 'Servicios', 'Otros'],
   income: ['Sueldo', 'Freelance', 'Ventas', 'Regalo', 'Inversiones', 'Otros'],
-  investment: ['Inversiones', 'Ahorro', 'Retiro', 'Otros']
+  investment: ['Inversiones', 'Ahorro', 'Retiro', 'Otros'],
+  transfer: ['Pago de tarjeta', 'Traspaso', 'Ahorro']
 };
 const COLORS = ['#d7e769', '#88c8c5', '#f7ad6b', '#b4a4e6', '#ea8d80', '#91c99a', '#80b2df'];
-const ICONS = {Comida:'◒',Casa:'⌂',Renta:'⌂',Salidas:'☼',Transporte:'↔',Salud:'✚',Personales:'♙',Servicios:'⌁',Inversiones:'↗',Ahorro:'◎',Sueldo:'▦',Freelance:'✦',Ventas:'◇',Regalo:'♡',Otros:'•',Retiro:'◌'};
+const ICONS = {'Pago de tarjeta':'▭',Traspaso:'⇄',Comida:'◒',Casa:'⌂',Renta:'⌂',Salidas:'☼',Transporte:'↔',Salud:'✚',Personales:'♙',Servicios:'⌁',Inversiones:'↗',Ahorro:'◎',Sueldo:'▦',Freelance:'✦',Ventas:'◇',Regalo:'♡',Otros:'•',Retiro:'◌'};
 const STORE = 'claro-finanzas-v1';
 const THEME_STORE = 'claro-theme';
 const money = new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN', maximumFractionDigits:0});
@@ -92,7 +93,7 @@ function renderDashboard(){
   $('#balance-value').textContent=money.format(balance); $('#income-value').textContent=money.format(income); $('#expense-value').textContent=money.format(expense);
   $('#expense-note').textContent=`${currentMovements().filter(m=>m.type==='expense').length} gastos este mes`;
   $('#saving-value').textContent=money.format(investment);
-  $('#saving-note').textContent='Registradas este mes';
+  $('#saving-note').textContent='No es el valor total de tus inversiones';
   $('.month-label').textContent=new Intl.DateTimeFormat('es-MX',{month:'long',year:'numeric'}).format(today).toUpperCase();
   $('.welcome h2').innerHTML='Tu dinero, claro <span>✦</span>';
   renderCategories(); renderBudgets(); renderRecent(); renderMoneyChart(); renderRecurring();
@@ -125,7 +126,7 @@ function budgetSpent(budget){const records=state.movements.filter(m=>m.type==='e
 function budgetMarkup(budget){const spent=budgetSpent(budget),limit=Number(budget.limit)||0,pct=limit?Math.min(100,spent/limit*100):0,warning=limit>0&&spent/limit>=.8;return `<div class="budget-row"><div class="budget-head"><strong>${escapeHtml(budget.category)} · ${frequencyLabel(budget.period||'monthly')}</strong><span>${money.format(spent)} / ${money.format(limit)}</span></div><div class="progress ${warning?'warn':''}"><span style="width:${pct}%"></span></div><p>${spent>limit?'Excediste el límite.':money.format(Math.max(0,limit-spent))+' disponibles en este periodo.'}</p>${spent>limit?repayMarkup(budget,spent-limit):''}${budgetOverlapNote(budget)}</div>`;}
 function renderBudgets(){ $('#budget-list').innerHTML=state.budgets.length?state.budgets.map(b=>`<article class="budget-item"><h3>${escapeHtml(b.category)}</h3>${budgetMarkup(b)}<div class="goal-actions"><button class="small-button edit-budget" data-id="${b.id}">Editar</button><button class="small-button danger-button delete-budget" data-id="${b.id}">Eliminar</button></div></article>`).join(''):'<p class="empty">Aún no hay límites por categoría.</p>'; $all('.edit-budget').forEach(button=>button.onclick=()=>editBudget(Number(button.dataset.id)));$all('.open-repay').forEach(button=>button.onclick=()=>openRepay(Number(button.dataset.id)));$all('.remove-repay').forEach(button=>button.onclick=()=>{if(confirm('¿Quitar este plan para reponer?')){state.recurringPlans=state.recurringPlans.filter(plan=>plan.id!==Number(button.dataset.id));save();renderAll();toast('Plan para reponer quitado.');}});$all('.delete-budget').forEach(b=>b.onclick=()=>{const budget=state.budgets.find(item=>item.id===Number(b.dataset.id));if(budget&&confirm(`¿Eliminar el límite de ${budget.category}?`)){state.budgets=state.budgets.filter(x=>x.id!==budget.id);save();renderAll();toast('Límite eliminado.');}}); }
 function renderRecent(){ $('#recent-movements').innerHTML=[...state.movements].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4).map(movement=>movementMarkup(movement)).join('') || '<p class="empty">Aún no hay movimientos.</p>'; }
-function movementMarkup(m, allowEdit=false){ const sign=m.type==='income'?'+':m.type==='transfer'?'↔ ':'−'; const typeClass=m.type==='transfer'?'investment':m.type; return `<div class="movement-row"><span class="category-icon">${ICONS[m.category]||'•'}</span><div class="movement-info"><strong>${escapeHtml(m.title)}</strong><small>${escapeHtml(m.category)} · ${displayDate(m.date)}${m.type==='transfer'?` · ${escapeHtml(accountLabel(m.accountId)||'Sin cuenta de origen')} → ${escapeHtml(accountLabel(m.toAccountId)||'cuenta eliminada')}`:accountLabel(m.accountId)?` · ${escapeHtml(accountLabel(m.accountId))}`:''}</small>${m.note?`<span class="movement-note">Nota: ${escapeHtml(m.note)}</span>`:''}</div><span class="movement-amount ${typeClass}">${sign}${money.format(m.amount)}</span>${allowEdit?`<span class="movement-actions">${!m.investmentId&&m.type!=='transfer'?`<button type="button" class="small-button edit-movement" data-id="${m.id}">Editar</button>`:''}<button type="button" class="small-button danger-button delete-movement" data-id="${m.id}">Eliminar</button></span>`:''}</div>`; }
+function movementMarkup(m, allowEdit=false){ const sign=m.type==='income'?'+':m.type==='transfer'?'↔ ':'−'; const typeClass=m.type==='transfer'?'investment':m.type; return `<div class="movement-row"><span class="category-icon">${ICONS[m.category]||'•'}</span><div class="movement-info"><strong>${escapeHtml(m.title)}</strong><small>${escapeHtml(m.category)} · ${displayDate(m.date)}${m.type==='transfer'?` · ${escapeHtml(accountLabel(m.accountId)||'Sin cuenta de origen')} → ${escapeHtml(accountLabel(m.toAccountId)||'cuenta eliminada')}`:accountLabel(m.accountId)?` · ${escapeHtml(accountLabel(m.accountId))}`:''}</small>${m.note?`<span class="movement-note">Nota: ${escapeHtml(m.note)}</span>`:''}</div><span class="movement-amount ${typeClass}">${sign}${money.format(m.amount)}</span>${allowEdit?`<span class="movement-actions">${!m.investmentId&&!(m.type==='transfer'&&m.goalId)?`<button type="button" class="small-button edit-movement" data-id="${m.id}">Editar</button>`:''}<button type="button" class="small-button danger-button delete-movement" data-id="${m.id}">Eliminar</button></span>`:''}</div>`; }
 function renderMovements(){ const type=$('#movement-type-filter').value, category=$('#movement-category-filter').value; const all=state.movements.filter(m=>(type==='all'||m.type===type)&&(category==='all'||m.category===category)).sort((a,b)=>b.date.localeCompare(a.date)); $('#movement-list').innerHTML=all.length?all.map(m=>movementMarkup(m,true)).join(''):'<p class="empty">No hay movimientos con esos filtros.</p>'; $all('.edit-movement').forEach(button=>button.onclick=()=>editMovement(Number(button.dataset.id))); $all('.delete-movement').forEach(button=>button.onclick=()=>deleteMovement(Number(button.dataset.id))); }
 function goalLinkedValue(goal){if(!goal.linkType||goal.linkType==='none')return 0;if(goal.linkType==='account'){const account=state.accounts.find(item=>item.id===Number(goal.accountId));return account?Math.max(0,accountBalanceToday(account)):0;}const linked=state.investments.filter(investment=>goal.linkType==='portfolio'||Number(goal.investmentId)===Number(investment.id));return linked.reduce((sum,investment)=>{const metrics=investmentMetrics(investment);if(goal.linkType==='interest')return sum+Math.max(0,metrics.gain);return sum+metrics.value;},0);}
 function renderGoals(){ $('#goal-list').innerHTML=state.goals.length?state.goals.map(g=>{const linked=goalLinkedValue(g),current=Number(g.current)+linked,pct=Math.min(100,current/g.target*100),linkLabel=g.linkType==='account'?(accountLabel(g.accountId)?`el saldo de ${escapeHtml(accountLabel(g.accountId))}`:'una cuenta que ya no existe'):g.linkType==='interest'?'intereses estimados':g.linkType==='portfolio'?'portafolio estimado':g.linkType==='investment'?'inversión vinculada':''; return `<article class="goal-item"><div class="goal-top"><div><h3>${escapeHtml(g.name)}</h3><p>${money.format(current)} de ${money.format(g.target)}</p></div><span class="goal-icon">◎</span></div>${linkLabel?`<p class="goal-link-note">Incluye ${linkLabel}: ${money.format(linked)}</p>`:''}${(g.linkType==='account'||g.linkType==='investment')&&accountLabel(g.originAccountId)?`<p class="goal-link-note">El ahorro sale de ${escapeHtml(accountLabel(g.originAccountId))}</p>`:''}<div class="progress"><span style="width:${pct}%"></span></div><div class="budget-head" style="margin-top:10px"><span>${Math.round(pct)}% completado</span><strong>Faltan ${money.format(Math.max(0,g.target-current))}</strong></div><div class="goal-actions"><button class="small-button edit-goal" data-id="${g.id}">Editar</button><button class="small-button add-to-goal" data-id="${g.id}">Añadir ahorro</button><button class="small-button danger-button delete-goal" data-id="${g.id}">Eliminar</button></div></article>`;}).join(''):'<p class="empty">Aún no hay metas.</p>'; $all('.edit-goal').forEach(button=>button.onclick=()=>editGoal(Number(button.dataset.id)));$all('.add-to-goal').forEach(b=>b.onclick=()=>addToGoal(Number(b.dataset.id))); $all('.delete-goal').forEach(b=>b.onclick=()=>{const goal=state.goals.find(item=>item.id===Number(b.dataset.id));if(goal&&confirm(`¿Eliminar la meta “${goal.name}”?`)){state.goals=state.goals.filter(g=>g.id!==goal.id);save();renderAll();toast('Meta eliminada.');}}); }
@@ -158,13 +159,13 @@ function renderAccountsChart(){
   const months=Number(state.preferences.accountsHorizon||3),end=addMonthsClamped(today,months),days=Math.max(1,Math.round((end-today)/86400000)),count=months===1?Math.min(days,30):months<=3?Math.ceil(days/7):months;
   const dates=Array.from({length:count+1},(_,index)=>{if(months>3)return addMonthsClamped(today,index);const date=new Date(today);date.setDate(date.getDate()+(months===1?index:index*7));return date>end?new Date(end):date;});
   const entries=state.accounts.map((account,index)=>({account,label:accountLabel(account.id),color:LINE_COLORS[index%LINE_COLORS.length],values:dates.map((date,i)=>i===0?accountBalanceToday(account):accountProjectedOn(account,iso(date)))}));
-  const W=960,H=360,left=110,right=24,top=20,bottom=50,plotW=W-left-right,plotH=H-top-bottom;
+  const fs=chartFont(),W=960,H=Math.round(360*Math.min(1.6,Math.max(1,chartScale()*0.75))),left=Math.max(110,Math.round(fs*4.4)),right=24,top=20,bottom=Math.max(50,fs*2+14),plotW=W-left-right,plotH=H-top-bottom;
   const all=entries.flatMap(entry=>entry.values),{low,high,step}=niceScale(Math.min(0,...all),Math.max(0,...all));
   const x=index=>left+(index/Math.max(1,dates.length-1))*plotW,y=value=>top+(high-value)/(high-low)*plotH;
-  const grid=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)grid.push(`<line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="17">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`);
+  const grid=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)grid.push(`<line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="${fs}">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`);
   const zero=low<0?`<line x1="${left}" y1="${y(0)}" x2="${W-right}" y2="${y(0)}" stroke="#aab9b2" stroke-width="1.4"/>`:'';
-  const fmt=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}),step2=Math.ceil(dates.length/8);
-  const labels=dates.map((date,index)=>index%step2===0||index===dates.length-1?`<text x="${x(index)}" y="${H-16}" text-anchor="middle" fill="#80928c" font-size="17">${index===0?'Hoy':fmt.format(date)}</text>`:'').join('');
+  const fmt=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}),step2=Math.ceil(dates.length/(fs>16?5:8));
+  const labels=dates.map((date,index)=>index%step2===0||index===dates.length-1?`<text x="${x(index)}" y="${H-Math.round(fs*0.6)}" text-anchor="${index===0?'start':index===dates.length-1?'end':'middle'}" fill="#80928c" font-size="${fs}">${index===0?'Hoy':fmt.format(date)}</text>`:'').join('');
   const lines=entries.map(entry=>`<path d="${entry.values.map((value,index)=>`${index?'L':'M'} ${x(index).toFixed(1)} ${y(value).toFixed(1)}`).join(' ')}" fill="none" stroke="${entry.color}" stroke-width="3" ${entry.account.kind==='credit'?'stroke-dasharray="7 4"':''} stroke-linejoin="round"/>`).join('');
   const legend=`<div class="projection-lines-legend">${entries.map(entry=>`<span><i style="background:${entry.color}"></i>${escapeHtml(entry.label)}</span>`).join('')}</div>`;
   const last=dates.length-1,endName=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric'}).format(dates[last]);
@@ -211,15 +212,15 @@ function renderPortfolioChart(metrics,invested,portfolio){
   const snapshots=projectionSnapshots(dates);
   const points=snapshots.map((snapshot,index)=>{const values=[...snapshot.values];return{values,total:values.reduce((sum,value)=>sum+value,0),label:index===0?'Hoy':unit==='day'?`${labels[index]} d`:unit==='month'?`${labels[index]} m`:`${labels[index]} a`};});
   selectedPortfolioPointIndex=Math.min(Math.max(0,selectedPortfolioPointIndex),points.length-1);
-  const W=960,H=340,left=96,right=24,top=24,bottom=58,plotW=W-left-right,plotH=H-top-bottom;
+  const fs=chartFont(),W=960,H=Math.round(340*Math.min(1.6,Math.max(1,chartScale()*0.75))),left=Math.max(96,Math.round(fs*4.4)),right=24,top=24,bottom=Math.max(58,fs*2+14),plotW=W-left-right,plotH=H-top-bottom;
   const all=points.flatMap(point=>[point.total,...point.values]),scale=niceScale(Math.min(0,...all),Math.max(0,...all)),{low,high,step}=scale;
   const x=index=>left+(index/Math.max(1,points.length-1))*plotW,y=value=>top+(high-value)/(high-low)*plotH;
   const gridValues=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)gridValues.push(value);
-  const grid=gridValues.map(value=>`<g><line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="11">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text></g>`).join('');
+  const grid=gridValues.map(value=>`<g><line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="${fs}">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text></g>`).join('');
   const zero=low<0?`<line x1="${left}" y1="${y(0)}" x2="${W-right}" y2="${y(0)}" stroke="#aab9b2" stroke-width="1.2"/>`:'';
   const productLines=entries.map((entry,entryIndex)=>`<path d="${points.map((point,index)=>`${index?'L':'M'} ${x(index)} ${y(point.values[entryIndex])}`).join(' ')}" fill="none" stroke="${entry.color}" stroke-width="2.2" ${entry.account?'stroke-dasharray="7 4"':''} opacity=".95"/>`).join('');
   const totalPath=points.map((point,index)=>`${index?'L':'M'} ${x(index)} ${y(point.total)}`).join(' ');
-  const dots=points.map((point,index)=>`<circle class="projection-point ${index===selectedPortfolioPointIndex?'selected':''}" data-point="${index}" cx="${x(index)}" cy="${y(point.total)}" r="${index===selectedPortfolioPointIndex?7:5}" fill="#146c5b"><title>${point.label}: ${money.format(point.total)}</title></circle><text x="${x(index)}" y="${H-16}" text-anchor="middle" fill="#80928c" font-size="11">${point.label}</text>`).join('');
+  const dots=points.map((point,index)=>`<circle class="projection-point ${index===selectedPortfolioPointIndex?'selected':''}" data-point="${index}" cx="${x(index)}" cy="${y(point.total)}" r="${index===selectedPortfolioPointIndex?7:5}" fill="#146c5b"><title>${point.label}: ${money.format(point.total)}</title></circle>${index%Math.max(1,Math.ceil(points.length/(fs>16?6:13)))===0||index===points.length-1?`<text x="${x(index)}" y="${H-Math.round(fs*0.6)}" text-anchor="${index===0?'start':index===points.length-1?'end':'middle'}" fill="#80928c" font-size="${fs}">${point.label}</text>`:''}`).join('');
   const unitName=({day:'días',month:'meses',year:'años'})[unit];
   const legend=`<div class="projection-lines-legend"><span><i style="background:#146c5b"></i>Total</span>${entries.map(entry=>`<span><i style="background:${entry.color}"></i>${escapeHtml(entry.label)}</span>`).join('')}</div>`;
   const chart=`<div class="investment-forecast"><p>${unitName} desde hoy · MXN estimados. Solo inversiones (tus cuentas de débito y crédito no se incluyen). Toca un punto para ver la distribución.</p>${legend}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Proyección estimada de tus inversiones">${grid}${zero}${productLines}<path d="${totalPath}" fill="none" stroke="#146c5b" stroke-width="4"/>${dots}</svg></div>`;
@@ -242,7 +243,27 @@ function renderInvestmentPortfolio(metrics,invested,portfolio){
   $all('.delete-investment').forEach(button=>button.onclick=()=>{const investment=state.investments.find(item=>item.id===Number(button.dataset.id));if(investment&&confirm(`¿Eliminar “${investment.institution} · ${investment.product}” y sus operaciones reflejadas?`)){state.investments=state.investments.filter(item=>item.id!==investment.id);state.movements=state.movements.filter(movement=>movement.investmentId!==investment.id);save();renderAll();toast('Inversión eliminada.');}});
 }
 function frequencyLabel(value){return{daily:'Diaria',weekly:'Semanal',biweekly:'Quincenal',monthly:'Mensual',quarterly:'Trimestral',yearly:'Anual'}[value]||'Mensual';}
-function populateCategories(){ const select=$('#movement-category'); const type=$('#movement-type').value; select.innerHTML=CATEGORIES[type].map(c=>`<option>${c}</option>`).join(''); $all('.expense-categories').forEach(s=>s.innerHTML=CATEGORIES.expense.map(c=>`<option>${c}</option>`).join('')); const filter=$('#movement-category-filter'); const existing=filter.value; filter.innerHTML='<option value="all">Todas las categorías</option>'+[...new Set(state.movements.map(m=>m.category))].sort().map(c=>`<option>${c}</option>`).join(''); filter.value=existing; }
+/* Aviso: el movimiento es del mismo día (o anterior) que el saldo que registraste */
+function askAnchorChoice(accounts,data,done){
+  let dialog=$('#anchor-dialog');
+  if(!dialog){document.body.insertAdjacentHTML('beforeend','<dialog id="anchor-dialog" class="anchor-dialog"><div class="dialog-head"><h2>¿Ya estaba incluido en tu saldo?</h2></div><p id="anchor-text"></p><div class="anchor-actions"><button type="button" class="primary-button" id="anchor-yes"></button><button type="button" class="small-button" id="anchor-no">No, ya estaba incluido</button></div></dialog>');dialog=$('#anchor-dialog');}
+  const names=accounts.map(account=>`${accountLabel(account.id)} (${displayDate(account.balanceDate||iso(today))})`).join(' y ');
+  const verb=data.type==='income'?'sumarlo':data.type==='transfer'?'moverlo':'restarlo';
+  $('#anchor-text').textContent=`Este movimiento es del ${displayDate(data.date)}, igual o antes de la fecha del saldo que registraste en ${names}. Normalmente ese saldo ya lo incluye, así que no cambia tu saldo de hoy. ¿Quieres ${verb} de todos modos? (Recordaremos tu respuesta para los movimientos de esa fecha o antes en esta cuenta.)`;
+  $('#anchor-yes').textContent=`Sí, ${verb} del saldo`;
+  const finish=choice=>{dialog.close();done(choice);};
+  $('#anchor-yes').onclick=()=>finish(true);$('#anchor-no').onclick=()=>finish(false);
+  dialog.oncancel=event=>{event.preventDefault();};
+  dialog.showModal();
+}
+function syncTransferFields(){
+  const type=$('#movement-type').value,transfer=type==='transfer',to=$('#movement-to-account');
+  $('#movement-to-label').hidden=!transfer;to.required=transfer;$('#movement-account').required=transfer;
+  $('#movement-account-title').textContent=transfer?'¿De qué cuenta sale?':'Cuenta';
+  if(transfer){const current=to.value;to.innerHTML='<option value="">Elige la cuenta</option>'+state.accounts.map(account=>`<option value="${account.id}">${escapeHtml(accountLabel(account.id))}</option>`).join('');to.value=current;if(!to.value){const card=state.accounts.find(account=>account.kind==='credit');if(card)to.value=String(card.id);}syncTransferCategory();}
+}
+function syncTransferCategory(){const to=state.accounts.find(account=>account.id===Number($('#movement-to-account').value));const category=$('#movement-category');if($('#movement-type').value==='transfer'&&to)category.value=to.kind==='credit'?'Pago de tarjeta':category.value==='Pago de tarjeta'?'Traspaso':category.value;}
+function populateCategories(){ const select=$('#movement-category'); const type=$('#movement-type').value; const keep=select.value; select.innerHTML=CATEGORIES[type].map(c=>`<option>${c}</option>`).join(''); if(CATEGORIES[type].includes(keep))select.value=keep; syncTransferFields(); $all('.expense-categories').forEach(s=>s.innerHTML=CATEGORIES.expense.map(c=>`<option>${c}</option>`).join('')); const filter=$('#movement-category-filter'); const existing=filter.value; filter.innerHTML='<option value="all">Todas las categorías</option>'+[...new Set(state.movements.map(m=>m.category))].sort().map(c=>`<option>${c}</option>`).join(''); filter.value=existing; }
 function renderAll(){ populateCategories(); renderDashboard();renderTotalBalance();renderBackupReminder();renderCardAlerts();renderMovements();renderGoals();renderReminders();renderCapital();renderAccounts(); }
 function open(id){ $(id).showModal(); }
 function editBudget(budgetId){const budget=state.budgets.find(item=>item.id===budgetId);if(!budget)return;editingBudgetId=budgetId;const form=$('#budget-form');form.reset();form.elements.budgetId.value=budgetId;form.elements.category.value=budget.category;form.elements.kind.value=budget.kind||'variable';form.elements.period.value=budget.period||'monthly';form.elements.limit.value=budget.limit;$('#budget-dialog h2').textContent=`Editar límite · ${budget.category}`;$('#budget-form .submit-button').textContent='Guardar cambios';open('#budget-dialog');}
@@ -335,6 +356,7 @@ function editMovement(movementId){
   form.reset();
   $('#movement-type').value=movement.type;
   populateCategories();
+  if(movement.type==='transfer'){$('#movement-to-account').value=String(movement.toAccountId||'');}
   form.elements.title.value=movement.title;
   form.elements.amount.value=movement.amount;
   form.elements.date.value=movement.date;
@@ -363,9 +385,12 @@ function setup(){
   $('#open-recurring').onclick=()=>{const form=$('#recurring-form');form.reset();form.elements.planId.value='';form.elements.startDate.value=iso(today);form.elements.kind.value='fixed';$('#recurring-investment-label').hidden=true;$('#recurring-dialog h2').textContent='Ingreso o gasto planeado';$('#recurring-form .submit-button').textContent='Guardar plan';populateRecurringInvestmentChoices();populateAccountChoices($('#recurring-account'),defaultAccountId());syncCardTotalFields();syncRecurringAccountLabel();open('#recurring-dialog');};
   $('#investment-form').elements.taxRate.oninput=()=>{const form=$('#investment-form');if(!form.elements.taxPreset.value.startsWith('custom'))form.elements.taxPreset.value=form.elements.taxMode.value==='capital'?'custom-capital':'custom-interest';};
   $('#open-investment-operation').onclick=()=>openOperationFor();
-  $('#movement-type').onchange=populateCategories; $('#open-budget').onclick=()=>{editingBudgetId=null;const form=$('#budget-form');form.reset();form.elements.budgetId.value='';populateCategories();$('#budget-dialog h2').textContent='Nuevo límite';$('#budget-form .submit-button').textContent='Guardar';open('#budget-dialog');}; $('#open-goal').onclick=()=>{editingGoalId=null;const form=$('#goal-form');form.reset();form.elements.goalId.value='';form.elements.linkType.value='none';populateGoalInvestmentChoices();populateGoalAccountChoices();syncGoalLink();$('#goal-dialog h2').textContent='Nueva meta';$('#goal-form .submit-button').textContent='Guardar';open('#goal-dialog');}; $('#open-reminder').onclick=()=>{ editingReminderId=null;$('#reminder-form').reset();$('#reminder-form [name=date]').value=iso(today);$('#reminder-dialog h2').textContent='Nuevo recordatorio';$('#reminder-form .submit-button').textContent='Crear recordatorio';open('#reminder-dialog'); };
-  $('#movement-form').addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.accountId=data.accountId?Number(data.accountId):null;if(data.accountId)state.preferences.lastAccountId=data.accountId;const targetInvestment=data.type==='investment'&&editingMovementId===null?state.investments.find(item=>item.id===Number(data.investmentTarget)):null;delete data.investmentTarget;if(targetInvestment){const cap=Number(targetInvestment.interestCap)||0;if(cap&&investmentPrincipal(targetInvestment)+Number(data.amount)>cap){toast(`El tope de esa inversión es ${money.format(cap)}. Puedes aportar hasta ${money.format(Math.max(0,cap-investmentPrincipal(targetInvestment)))}.`);return;}const operation={id:id(),type:'contribution',amount:Number(data.amount),date:data.date,note:data.note||'',reflectInBalance:true};targetInvestment.operations=targetInvestment.operations||[];targetInvestment.operations.push(operation);state.movements.push({id:id(),...data,amount:Number(data.amount),investmentId:targetInvestment.id,investmentOperationId:operation.id});save();$('#movement-dialog').close();renderAll();toast('Aportación guardada en Movimientos y en tu inversión.');return;}if(editingMovementId!==null){const movement=state.movements.find(item=>item.id===editingMovementId);if(movement)Object.assign(movement,data,{amount:Number(data.amount)});editingMovementId=null;}else state.movements.push({id:id(),...data,amount:Number(data.amount)});save();$('#movement-dialog').close();renderAll();toast('Movimiento guardado correctamente.');});
-  $('#account-form').addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));delete data.accountId;data.kind=data.kind==='credit'?'credit':'debit';if(data.kind==='credit'){data.initialBalance=-Math.abs(Number(data.initialBalance)||0);data.creditLimit=Number(data.creditLimit)||0;data.hasYield='';const day=value=>{const n=Math.round(Number(value));return n>=1&&n<=31?n:null;};data.cutDay=day(data.cutDay);const after=Math.round(Number(data.dueAfterDays));data.dueAfterDays=after>=1&&after<=60?after:null;data.dueDay=null;data.alerts={cut:data.alertCut==='on',due:data.alertDue==='on',days:Number(data.alertDays)||0};}else{data.initialBalance=Math.abs(Number(data.initialBalance)||0);data.creditLimit=0;data.cutDay=null;data.dueDay=null;data.dueAfterDays=null;data.alerts=null;}['alertCut','alertDue','alertDays'].forEach(key=>delete data[key]);data.yield=data.hasYield==='on'&&Number(data.yieldRate)>0?{rate:Number(data.yieldRate),frequency:data.yieldFrequency||'daily',cap:Number(data.yieldCap)||0,taxRate:data.yieldTax==='mx'?MX_TAX_RATE:0}:null;if(data.kind!=='credit'&&data.hasYield==='on'&&!(Number(data.yieldRate)>0)){toast('Escribe la tasa anual que te paga esta cuenta.');return;}['hasYield','yieldRate','yieldFrequency','yieldCap','yieldTax'].forEach(key=>delete data[key]);data.balanceDate=data.balanceDate||iso(today);if(editingAccountId!==null){const account=state.accounts.find(item=>item.id===editingAccountId);if(account)Object.assign(account,data);editingAccountId=null;}else state.accounts.push({id:id(),...data});save();$('#account-dialog').close();renderAll();toast('Cuenta guardada.');});
+  $('#movement-type').onchange=populateCategories;$('#movement-to-account').onchange=syncTransferCategory; $('#open-budget').onclick=()=>{editingBudgetId=null;const form=$('#budget-form');form.reset();form.elements.budgetId.value='';populateCategories();$('#budget-dialog h2').textContent='Nuevo límite';$('#budget-form .submit-button').textContent='Guardar';open('#budget-dialog');}; $('#open-goal').onclick=()=>{editingGoalId=null;const form=$('#goal-form');form.reset();form.elements.goalId.value='';form.elements.linkType.value='none';populateGoalInvestmentChoices();populateGoalAccountChoices();syncGoalLink();$('#goal-dialog h2').textContent='Nueva meta';$('#goal-form .submit-button').textContent='Guardar';open('#goal-dialog');}; $('#open-reminder').onclick=()=>{ editingReminderId=null;$('#reminder-form').reset();$('#reminder-form [name=date]').value=iso(today);$('#reminder-dialog h2').textContent='Nuevo recordatorio';$('#reminder-form .submit-button').textContent='Crear recordatorio';open('#reminder-dialog'); };
+  $('#movement-form').addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.accountId=data.accountId?Number(data.accountId):null;if(data.type==='transfer'){data.toAccountId=Number(data.toAccountId)||null;if(!data.accountId||!data.toAccountId){toast('Elige de qué cuenta sale y a qué cuenta va.');return;}if(data.accountId===data.toAccountId){toast('El dinero no puede salir y llegar a la misma cuenta.');return;}}else delete data.toAccountId;
+  if(!e.anchorAnswered&&data.type!=='investment'){const editing=editingMovementId!==null?state.movements.find(item=>item.id===editingMovementId):null;const involved=[data.accountId,data.toAccountId].map(accountId=>state.accounts.find(account=>account.id===Number(accountId))).filter(account=>account&&data.date<=(account.balanceDate||iso(today)));const known=involved.find(account=>typeof account.anchorDefault==='boolean');if(involved.length&&known&&!involved.some(account=>typeof account.anchorDefault!=='boolean'))data.countInBalance=known.anchorDefault;else if(involved.length&&!(editing&&editing.countInBalance!==undefined&&editing.date===data.date)){askAnchorChoice(involved,data,choice=>{involved.forEach(account=>account.anchorDefault=choice);const again=new Event('submit',{cancelable:true});again.anchorAnswered=true;again.anchorChoice=choice;e.target.dispatchEvent(again);});return;}}
+  if(e.anchorAnswered)data.countInBalance=Boolean(e.anchorChoice);
+  if(data.accountId)state.preferences.lastAccountId=data.accountId;const targetInvestment=data.type==='investment'&&editingMovementId===null?state.investments.find(item=>item.id===Number(data.investmentTarget)):null;delete data.investmentTarget;if(targetInvestment){const cap=Number(targetInvestment.interestCap)||0;if(cap&&investmentPrincipal(targetInvestment)+Number(data.amount)>cap){toast(`El tope de esa inversión es ${money.format(cap)}. Puedes aportar hasta ${money.format(Math.max(0,cap-investmentPrincipal(targetInvestment)))}.`);return;}const operation={id:id(),type:'contribution',amount:Number(data.amount),date:data.date,note:data.note||'',reflectInBalance:true};targetInvestment.operations=targetInvestment.operations||[];targetInvestment.operations.push(operation);state.movements.push({id:id(),...data,amount:Number(data.amount),investmentId:targetInvestment.id,investmentOperationId:operation.id});save();$('#movement-dialog').close();renderAll();toast('Aportación guardada en Movimientos y en tu inversión.');return;}if(editingMovementId!==null){const movement=state.movements.find(item=>item.id===editingMovementId);if(movement)Object.assign(movement,data,{amount:Number(data.amount)});editingMovementId=null;}else state.movements.push({id:id(),...data,amount:Number(data.amount)});save();$('#movement-dialog').close();renderAll();toast('Movimiento guardado correctamente.');});
+  $('#account-form').addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));delete data.accountId;data.kind=data.kind==='credit'?'credit':'debit';if(data.kind==='credit'){data.initialBalance=-Math.abs(Number(data.initialBalance)||0);data.creditLimit=Number(data.creditLimit)||0;data.hasYield='';const day=value=>{const n=Math.round(Number(value));return n>=1&&n<=31?n:null;};data.cutDay=day(data.cutDay);const after=Math.round(Number(data.dueAfterDays));data.dueAfterDays=after>=1&&after<=60?after:null;data.dueDay=null;data.alerts={cut:data.alertCut==='on',due:data.alertDue==='on',days:Number(data.alertDays)||0};}else{data.initialBalance=Math.abs(Number(data.initialBalance)||0);data.creditLimit=0;data.cutDay=null;data.dueDay=null;data.dueAfterDays=null;data.alerts=null;}['alertCut','alertDue','alertDays'].forEach(key=>delete data[key]);data.yield=data.hasYield==='on'&&Number(data.yieldRate)>0?{rate:Number(data.yieldRate),frequency:data.yieldFrequency||'daily',cap:Number(data.yieldCap)||0,taxRate:data.yieldTax==='mx'?MX_TAX_RATE:0}:null;if(data.kind!=='credit'&&data.hasYield==='on'&&!(Number(data.yieldRate)>0)){toast('Escribe la tasa anual que te paga esta cuenta.');return;}['hasYield','yieldRate','yieldFrequency','yieldCap','yieldTax'].forEach(key=>delete data[key]);data.balanceDate=data.balanceDate||iso(today);if(editingAccountId!==null){const account=state.accounts.find(item=>item.id===editingAccountId);if(account){if(account.balanceDate!==data.balanceDate||Number(account.initialBalance)!==Number(data.initialBalance))delete account.anchorDefault;Object.assign(account,data);}editingAccountId=null;}else state.accounts.push({id:id(),...data});save();$('#account-dialog').close();renderAll();toast('Cuenta guardada.');});
   $('#investment-form').addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const reflectInitial=data.reflectInitial==='on';delete data.investmentId;delete data.reflectInitial;delete data.taxPreset;delete data.feePreset;delete data.feeChoice;const planMode=data.contributionMode;delete data.contributionMode;if(planMode!=='income')data.fundingPlanId='';if(planMode!=='monthly')data.monthlyContribution=0;if(planMode==='income'&&!data.fundingPlanId){toast('Elige de qué ingreso recurrente sale el dinero.');return;}data.accountId=data.accountId?Number(data.accountId):null;['capital','rate','durationValue','monthlyContribution','taxRate','annualFee','annualFeeAmount','interestCap','fundingAmount'].forEach(key=>data[key]=Number(data[key]||0));data.fundingPlanId=data.fundingPlanId?Number(data.fundingPlanId):null;if(data.fundingPlanId){const source=state.recurringPlans.find(plan=>plan.id===data.fundingPlanId);if(data.fundingAmount<=0){toast('Escribe cuánto apartarás de ese ingreso cada vez.');return;}if(source&&data.fundingAmount>Number(source.amount)){toast(`No puedes apartar más que el monto del ingreso (${money.format(source.amount)}).`);return;}}else data.fundingAmount=0;data.redirectInvestmentId=data.redirectInvestmentId?Number(data.redirectInvestmentId):null;if(data.interestCap>0&&data.capital>data.interestCap){toast('El capital inicial no puede superar el tope de aportaciones.');return;}if(editingInvestmentId!==null){if(Number(data.redirectInvestmentId)===Number(editingInvestmentId))data.redirectInvestmentId=null;const investment=state.investments.find(item=>item.id===editingInvestmentId);if(investment){Object.assign(investment,data);const initialMovement=state.movements.find(item=>item.investmentId===investment.id&&item.investmentOperationId==='initial');if(initialMovement)Object.assign(initialMovement,{amount:investment.capital,date:investment.startDate,title:`Capital inicial · ${investment.institution} · ${investment.product}`});}editingInvestmentId=null;}else{const investment={id:id(),...data,operations:[]};state.investments.push(investment);if(reflectInitial&&investment.capital>0)state.movements.push({id:id(),type:'investment',investmentId:investment.id,investmentOperationId:'initial',title:`Capital inicial · ${investment.institution} · ${investment.product}`,amount:investment.capital,category:'Inversiones',date:investment.startDate,note:'Aportación inicial reflejada desde el portafolio.'});}save();$('#investment-dialog').close();populateGoalInvestmentChoices();renderAll();toast('Inversión guardada.');});
   $('#investment-operation-form').addEventListener('submit',e=>{
     e.preventDefault();
@@ -597,31 +622,41 @@ function setInvestmentPlanFields(investment=null){
   syncFunding();
 }
 /* Gráfica principal: todo tu dinero del día 1 al último día del mes */
-const CHART_DEFAULTS={include:'all',view:'balance',lines:'both',group:'bank',scale:'auto',min:'',max:'',projection:'on',hidden:[]};
+const CHART_DEFAULTS={show:null,group:'bank',scale:'auto',min:'',max:'',hidden:[]};
+const SHOW_DEFAULTS={accounts:true,investments:true,total:true,income:false,expense:false,net:false,estimate:true};
 const LINE_COLORS=['#3b82c4','#e08a3c','#8a6fd1','#d0574f','#2e9c72','#b8901c','#3fa7bd','#c0559b'];
 const axisMoney=new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',notation:'compact',maximumFractionDigits:1});
 let lastChartRange=null,chartSelectedDay=null;
-function chartPrefs(){state.preferences.chart={...CHART_DEFAULTS,...(state.preferences.chart||{})};if(!Array.isArray(state.preferences.chart.hidden))state.preferences.chart.hidden=[];return state.preferences.chart;}
+function chartPrefs(){
+  const prefs=state.preferences.chart={...CHART_DEFAULTS,...(state.preferences.chart||{})};if(!Array.isArray(prefs.hidden))prefs.hidden=[];
+  if(!prefs.show||typeof prefs.show!=='object'){
+    // Pasar de las opciones anteriores (vista, líneas, solo cuentas/inversiones, estimado) a casillas combinables
+    const flow=prefs.view==='flow',include=prefs.include||'all',lines=prefs.lines||'both';
+    prefs.show={...SHOW_DEFAULTS,accounts:!flow&&include!=='investments',investments:!flow&&include!=='accounts',total:!flow&&lines!=='groups',income:flow,expense:flow,net:flow,estimate:prefs.projection!=='off'};
+    ['view','lines','include','projection'].forEach(key=>delete prefs[key]);
+  }
+  prefs.show={...SHOW_DEFAULTS,...prefs.show};
+  return prefs;
+}
 function syncMoneyChartControls(){
   const prefs=chartPrefs();
-  $('#chart-view').value=prefs.view;$('#chart-lines').value=prefs.lines;$('#chart-group').value=prefs.group;$('#chart-scale').value=prefs.scale;$('#chart-projection').value=prefs.projection;
+  $all('#chart-controls [data-show]').forEach(box=>box.checked=Boolean(prefs.show[box.dataset.show]));
+  $('#chart-group').value=prefs.group;$('#chart-scale').value=prefs.scale;
   if($('#chart-min')!==document.activeElement)$('#chart-min').value=prefs.min;
   if($('#chart-max')!==document.activeElement)$('#chart-max').value=prefs.max;
-  $all('#chart-controls .balance-only').forEach(element=>element.hidden=prefs.view!=='balance');
-  const chips=$('#chart-include');if(chips){chips.hidden=prefs.view!=='balance';const estimate=$('#chart-estimate');if(estimate){const on=prefs.projection!=='off';estimate.classList.toggle('active',on);estimate.setAttribute('aria-pressed',String(on));estimate.textContent=on?'✓ Mostrar estimado':'Mostrar estimado';}$all('#chart-include button[data-include]').forEach(button=>{const on=button.dataset.include===prefs.include;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});}
+  $('#chart-group').closest('label').hidden=!(prefs.show.accounts||prefs.show.investments);
   $all('#chart-controls .manual-only').forEach(element=>element.hidden=prefs.scale!=='manual');
 }
 function setupMoneyChartControls(){
   const button=$('#chart-settings-button'),panel=$('#chart-controls');
   button.onclick=()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));button.textContent=panel.hidden?'Ajustar gráfica':'Ocultar ajustes';};
-  [['#chart-view','view','change'],['#chart-lines','lines','change'],['#chart-group','group','change'],['#chart-projection','projection','change'],['#chart-scale','scale','change'],['#chart-min','min','input'],['#chart-max','max','input']].forEach(([selector,key,event])=>$(selector).addEventListener(event,()=>{
+  $all('#chart-controls [data-show]').forEach(box=>box.addEventListener('change',()=>{const prefs=chartPrefs();prefs.show[box.dataset.show]=box.checked;save();syncMoneyChartControls();renderMoneyChart();}));
+  [['#chart-group','group','change'],['#chart-scale','scale','change'],['#chart-min','min','input'],['#chart-max','max','input']].forEach(([selector,key,event])=>$(selector).addEventListener(event,()=>{
     const prefs=chartPrefs();prefs[key]=$(selector).value;
     if(key==='scale'&&prefs.scale==='manual'&&prefs.min===''&&prefs.max===''&&lastChartRange){prefs.min=String(Math.floor(lastChartRange.low));prefs.max=String(Math.ceil(lastChartRange.high));}
-    if(key==='group'||key==='view')prefs.hidden=[];
+    if(key==='group')prefs.hidden=[];
     save();syncMoneyChartControls();renderMoneyChart();
   }));
-  const estimate=$('#chart-estimate');if(estimate)estimate.onclick=()=>{const prefs=chartPrefs();prefs.projection=prefs.projection==='off'?'on':'off';save();syncMoneyChartControls();renderMoneyChart();};
-  $all('#chart-include button[data-include]').forEach(button=>button.onclick=()=>{const prefs=chartPrefs();prefs.include=button.dataset.include;prefs.hidden=[];chartSelectedDay=null;save();syncMoneyChartControls();renderMoneyChart();});
   syncMoneyChartControls();
 }
 function monthInfo(){
@@ -632,10 +667,12 @@ function dayValues(info,valueFor){return Array.from({length:info.days},(_,index)
 function movementEffect(movement){const value=Number(movement.amount)||0;return movement.type==='income'?value:-value;}
 function accountBalanceOn(account,dateIso,movements){
   // El saldo registrado es el saldo de ese día: no se cuenta como ingreso.
+  // Un movimiento de ese día o anterior se supone incluido, salvo que el usuario pidió sumarlo (countInBalance).
   const anchor=account.balanceDate||iso(today);
   if(account.yield&&dateIso>anchor)return accountYieldBalance(account,dateIso,movements,[]);
   let balance=Number(account.initialBalance)||0;
   for(const movement of movements){
+    if(movement.countInBalance&&movement.date<=anchor){if(movement.date<=dateIso)balance+=movementEffect(movement);continue;}
     if(dateIso>=anchor){if(movement.date>anchor&&movement.date<=dateIso)balance+=movementEffect(movement);}
     else if(movement.date>dateIso&&movement.date<=anchor)balance-=movementEffect(movement);
   }
@@ -647,7 +684,7 @@ function accountYieldBalance(account,dateIso,movements,flows){
   movements.forEach(movement=>{if(movement.date>anchor&&movement.date<=dateIso)byDate[movement.date]=(byDate[movement.date]||0)+movementEffect(movement);});
   flows.forEach(flow=>{if(flow.date>anchor&&flow.date<=dateIso)byDate[flow.date]=(byDate[flow.date]||0)+flow.amount;});
   const rate=Number(info.rate||0)/100,cap=Number(info.cap)||0,tax=Number(info.taxRate||0)/100;
-  let balance=Number(account.initialBalance)||0,guard=0;
+  let balance=(Number(account.initialBalance)||0)+movements.filter(movement=>movement.countInBalance&&movement.date<=anchor).reduce((sum,movement)=>sum+movementEffect(movement),0),guard=0;
   for(let date=new Date(`${anchor}T12:00:00`);guard++<40000;){
     date.setDate(date.getDate()+1);const key=iso(date);if(key>dateIso)break;
     balance+=byDate[key]||0;
@@ -665,16 +702,16 @@ function investmentValueOn(investment,dateIso){
 function balanceItems(info){
   const items=[],accountIds=new Set(state.accounts.map(account=>account.id)),future=(index)=>index+1>=info.todayDay;
   const projectedValues=valueFor=>Array.from({length:info.days},(_,index)=>future(index)?valueFor(info.dayIso(index+1)):null);
-  state.accounts.forEach(account=>{const own=accountMovements(account);items.push({id:`a${account.id}`,bank:(account.institution||account.name||'Cuenta').trim(),label:accountLabel(account.id),values:dayValues(info,day=>accountBalanceOn(account,day,own)),projected:projectedValues(day=>accountProjectedOn(account,day))});});
-  state.investments.forEach(investment=>items.push({id:`i${investment.id}`,bank:(investment.institution||'Inversión').trim(),label:investmentName(investment),values:dayValues(info,day=>investmentValueOn(investment,day)),projected:projectedValues(day=>day===iso(today)?investmentValueOn(investment,day):investmentValue(investment,new Date(`${day}T12:00:00`),true))}));
+  state.accounts.forEach(account=>{const own=accountMovements(account);items.push({id:`a${account.id}`,kind:'account',credit:account.kind==='credit',bank:(account.institution||account.name||'Cuenta').trim(),label:accountLabel(account.id),values:dayValues(info,day=>accountBalanceOn(account,day,own)),projected:projectedValues(day=>accountProjectedOn(account,day))});});
+  state.investments.forEach(investment=>items.push({id:`i${investment.id}`,kind:'investment',bank:(investment.institution||'Inversión').trim(),label:investmentName(investment),values:dayValues(info,day=>investmentValueOn(investment,day)),projected:projectedValues(day=>day===iso(today)?investmentValueOn(investment,day):investmentValue(investment,new Date(`${day}T12:00:00`),true))}));
   const loose=state.movements.filter(movement=>!accountIds.has(Number(movement.accountId))&&!movement.investmentId&&movement.type!=='investment'&&movement.type!=='transfer'&&movement.date.startsWith(monthKey()));
-  if(loose.length||!items.length){const values=dayValues(info,day=>loose.filter(movement=>movement.date<=day).reduce((sum,movement)=>sum+movementEffect(movement),0)),now=values[info.todayDay-1]??0;items.push({id:'loose',bank:'Sin cuenta',label:'Movimientos sin cuenta (neto del mes)',values,projected:Array.from({length:info.days},(_,index)=>future(index)?now:null)});}
+  if(loose.length||!items.length){const values=dayValues(info,day=>loose.filter(movement=>movement.date<=day).reduce((sum,movement)=>sum+movementEffect(movement),0)),now=values[info.todayDay-1]??0;items.push({id:'loose',kind:'account',bank:'Sin cuenta',label:'Movimientos sin cuenta (neto del mes)',values,projected:Array.from({length:info.days},(_,index)=>future(index)?now:null)});}
   return items;
 }
 function groupItems(items,mode){
-  if(mode==='item')return items.map(item=>({id:item.id,label:item.label,values:item.values,projected:item.projected}));
+  if(mode==='item')return items.map(item=>({id:item.id,kind:item.kind,label:item.label,values:item.values,projected:item.projected}));
   const groups=new Map(),add=(a,b)=>a.map((value,index)=>value===null||b[index]===null?null:value+b[index]);
-  items.forEach(item=>{const key=item.id==='loose'?'loose':item.bank.toLocaleLowerCase('es-MX'),group=groups.get(key);if(group){group.values=add(group.values,item.values);group.projected=add(group.projected,item.projected);}else groups.set(key,{id:`g-${key}`,label:item.id==='loose'?item.label:item.bank,values:[...item.values],projected:[...item.projected]});});
+  items.forEach(item=>{const key=item.id==='loose'?'loose':`${item.bank.toLocaleLowerCase('es-MX')}${item.credit?'-tarjeta':item.kind==='investment'?'-inv':''}`,group=groups.get(key);if(group){group.values=add(group.values,item.values);group.projected=add(group.projected,item.projected);}else groups.set(key,{id:`g-${key}`,kind:item.kind,label:item.id==='loose'?item.label:item.credit?`${item.bank} · tarjetas`:item.bank,values:[...item.values],projected:[...item.projected]});});
   return [...groups.values()];
 }
 function flowSeries(info){
@@ -684,6 +721,9 @@ function flowSeries(info){
   rows.forEach((row,index)=>{income+=row.income;expense+=row.expense;const future=index+1>info.todayDay;values.income.push(future?null:income);values.expense.push(future?null:expense);values.net.push(future?null:income-expense);});
   return [{key:'income',label:'Ingresos',color:'#278373',width:3,values:values.income},{key:'expense',label:'Gastos',color:'#e08a3c',width:3,values:values.expense},{key:'net',label:'Neto (ingresos − gastos)',color:'#7669aa',width:3,values:values.net}];
 }
+/* Tamaño de letra de las gráficas: las gráficas se dibujan a 960 de ancho y se encogen en el celular, así que la letra se agranda para verse de ~12 px */
+function chartScale(){const width=Math.min(Math.max(280,(window.innerWidth||960)-40),960);return Math.max(1,900/width);}
+function chartFont(base=11){return Math.round(Math.max(base,11.5*chartScale()));}
 function niceScale(min,max){
   if(!Number.isFinite(min)||!Number.isFinite(max)){min=0;max=100;}
   if(min===max){const pad=Math.max(100,Math.abs(max)*.1);min-=pad;max+=pad;}
@@ -691,7 +731,7 @@ function niceScale(min,max){
   return{low:Math.floor(min/step)*step,high:Math.ceil(max/step)*step,step};
 }
 function drawMonthChart(series,info,prefs,aria){
-  const W=960,H=390,left=84,right=20,top=20,bottom=46,plotW=W-left-right,plotH=H-top-bottom;
+  const fs=chartFont(),W=960,H=Math.round(390*Math.min(1.6,chartScale()*0.75>1?chartScale()*0.75:1)),left=Math.max(84,Math.round(fs*4.4)),right=20,top=20,bottom=Math.max(46,fs*2+14),plotW=W-left-right,plotH=H-top-bottom;
   const values=series.flatMap(item=>[...item.values,...(item.projected||[])].filter(value=>value!==null&&value!==undefined));
   const dataMin=values.length?Math.min(...values):0,dataMax=values.length?Math.max(...values):0;
   let scale;
@@ -701,11 +741,11 @@ function drawMonthChart(series,info,prefs,aria){
   lastChartRange=scale;
   const {low,high,step}=scale,x=day=>left+(info.days>1?(day-1)/(info.days-1):0)*plotW,y=value=>top+(high-value)/(high-low)*plotH;
   const ticks=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)ticks.push(value);
-  const grid=ticks.map(value=>`<line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="11">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`).join('');
+  const grid=ticks.map(value=>`<line x1="${left}" y1="${y(value)}" x2="${W-right}" y2="${y(value)}" stroke="#e8ede9"/><text x="${left-9}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="${fs}">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`).join('');
   const zero=low<0&&high>0?`<line x1="${left}" y1="${y(0)}" x2="${W-right}" y2="${y(0)}" stroke="#aab9b2" stroke-width="1.2"/>`:'';
   const xTicks=[...new Set([1,5,10,15,20,25,info.days])].filter(day=>day<=info.days&&(day===info.days||info.days-day>=3));
-  const xLabels=xTicks.map(day=>`<text x="${x(day)}" y="${H-16}" text-anchor="middle" fill="#80928c" font-size="12">${day}</text>`).join('');
-  const future=info.todayDay<info.days?`<rect x="${x(info.todayDay)}" y="${top}" width="${x(info.days)-x(info.todayDay)}" height="${plotH}" fill="#80928c" opacity=".07"/><line x1="${x(info.todayDay)}" y1="${top}" x2="${x(info.todayDay)}" y2="${top+plotH}" stroke="#80928c" stroke-dasharray="4 4"/><text x="${x(info.todayDay)+6}" y="${top+14}" fill="#80928c" font-size="11">Hoy${series.some(item=>item.projected)?' · después: estimado':''}</text>`:'';
+  const xLabels=xTicks.map(day=>`<text x="${x(day)}" y="${H-Math.round(fs*0.6)}" text-anchor="middle" fill="#80928c" font-size="${fs}">${day}</text>`).join('');
+  const future=info.todayDay<info.days?`<rect x="${x(info.todayDay)}" y="${top}" width="${x(info.days)-x(info.todayDay)}" height="${plotH}" fill="#80928c" opacity=".07"/><line x1="${x(info.todayDay)}" y1="${top}" x2="${x(info.todayDay)}" y2="${top+plotH}" stroke="#80928c" stroke-dasharray="4 4"/><text x="${x(info.todayDay)+(info.todayDay>info.days*0.6?-6:6)}" y="${top+fs}" text-anchor="${info.todayDay>info.days*0.6?'end':'start'}" fill="#80928c" font-size="${fs}">Hoy${series.some(item=>item.projected)?(fs>16?' · luego estimado':' · después: estimado'):''}</text>`:'';
   const selected=chartSelectedDay&&chartSelectedDay!==info.todayDay?`<line x1="${x(chartSelectedDay)}" y1="${top}" x2="${x(chartSelectedDay)}" y2="${top+plotH}" stroke="#146c5b" stroke-width="1.5"/>`:'';
   const pathFor=list=>{let path='',started=false;(list||[]).forEach((value,index)=>{if(value===null||value===undefined)return;path+=`${started?'L':'M'} ${x(index+1).toFixed(1)} ${y(value).toFixed(1)} `;started=true;});return path;};
   const valueAt=(item,index)=>index+1>info.todayDay?item.projected?.[index]??null:item.values[index];
@@ -715,29 +755,28 @@ function drawMonthChart(series,info,prefs,aria){
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${aria}"><defs><clipPath id="plot-clip"><rect x="${left}" y="${top-6}" width="${plotW}" height="${plotH+12}"/></clipPath></defs>${grid}${zero}${future}${cardChartMarks(info,x,top,plotH)}${selected}<g clip-path="url(#plot-clip)">${lines}</g>${xLabels}${hits}</svg>`;
 }
 function renderMoneyChart(){
-  const prefs=chartPrefs(),info=monthInfo();let series,subtitle,footnote,aria;
-  if(prefs.view==='flow'){
-    series=flowSeries(info);subtitle='Ingresos y gastos acumulados, del día 1 al último día del mes';footnote='Eje horizontal: día del mes · Eje vertical: pesos. No incluye saldos de cuentas ni inversiones.';aria='Ingresos, gastos y neto acumulados por día durante este mes';
-  }else{
-    const showProjection=prefs.projection!=='off';
-    const include=prefs.include||'all',items=balanceItems(info).filter(item=>include==='all'||(include==='investments'?item.id.startsWith('i'):!item.id.startsWith('i')));
-    const groups=groupItems(items,prefs.group).map((item,index)=>({key:item.id,label:item.label,color:LINE_COLORS[index%LINE_COLORS.length],width:2.5,values:item.values,projected:showProjection&&info.todayDay<info.days?item.projected:null}));
-    const sum=pick=>Array.from({length:info.days},(_,index)=>{const parts=groups.map(item=>pick(item)?.[index]);return parts.some(value=>value===null||value===undefined)?null:parts.reduce((total,value)=>total+value,0);});
-    const total={key:'total',label:'Total',color:'#146c5b',width:4.5,values:sum(item=>item.values),projected:showProjection&&info.todayDay<info.days?sum(item=>item.projected):null};
-    series=prefs.lines==='total'?[total]:prefs.lines==='groups'?groups:[...groups,total];
-    subtitle=prefs.lines==='total'?'Total de tu dinero, del día 1 al último día del mes':`Saldo de cada ${prefs.group==='bank'?'banco':'cuenta e inversión'}${prefs.lines==='both'?' y el total':''}, del día 1 al último día del mes`;
-    footnote=(cardFootnote()?cardFootnote()+' ':'')+(state.accounts.length||state.investments.length?`Las cuentas empiezan con el saldo que registraste (no cuenta como ingreso).${showProjection?' La línea punteada después de hoy es una estimación con tus planes recurrentes: la nómina suma en su cuenta y lo que apartas para inversiones o pagos se resta de la cuenta conectada.':''}`:'Agrega tus cuentas en Inversiones → Cuentas para ver el saldo de cada banco. Mientras tanto, se muestra el neto de tus movimientos.');
-    aria='Saldo de tu dinero por día durante este mes';if(prefs.include==='accounts')subtitle+=' · solo cuentas';else if(prefs.include==='investments')subtitle+=' · solo inversiones';
-  }
+  const prefs=chartPrefs(),info=monthInfo(),show=prefs.show,estimate=show.estimate&&info.todayDay<info.days;
+  const items=balanceItems(info).filter(item=>item.kind==='investment'?show.investments:show.accounts);
+  const groups=groupItems(items,prefs.group).map((item,index)=>({key:item.id,label:item.label,color:LINE_COLORS[index%LINE_COLORS.length],width:2.5,values:item.values,projected:estimate?item.projected:null}));
+  const sum=pick=>Array.from({length:info.days},(_,index)=>{const parts=groups.map(item=>pick(item)?.[index]);return parts.some(value=>value===null||value===undefined)?null:parts.reduce((total,value)=>total+value,0);});
+  const kinds=[show.accounts?'cuentas':'',show.investments?'inversiones':''].filter(Boolean);
+  const series=[...groups];
+  if(show.total&&groups.length)series.push({key:'total',label:kinds.length===1?`Total de ${kinds[0]}`:'Total',color:'#146c5b',width:4.5,values:sum(item=>item.values),projected:estimate?sum(item=>item.projected):null});
+  const FLOW_STYLE={income:'#16a34a',expense:'#dc2626',net:'#7c3aed'};
+  flowSeries(info).filter(item=>show[item.key]).forEach(item=>series.push({...item,color:FLOW_STYLE[item.key],width:2.5}));
+  const parts=[kinds.length?`saldo de tus ${kinds.join(' e ')}${show.total&&groups.length?' y el total':''}`:show.total?'':'',['income','expense','net'].filter(key=>show[key]).map(key=>({income:'ingresos',expense:'gastos',net:'neto'})[key]).join(', ')].filter(Boolean);
+  const subtitle=parts.length?`${parts.join(' · ').replace(/^./,c=>c.toUpperCase())}, del día 1 al último día del mes`:'Elige en «Ajustar gráfica» qué quieres ver';
+  const footnote=[cardFootnote(),groups.length?'Las cuentas empiezan con el saldo que registraste (no cuenta como ingreso).':'',estimate&&groups.length?'La línea punteada después de hoy es una estimación con tus planes recurrentes.':'',['income','expense','net'].some(key=>show[key])?'Ingresos, gastos y neto se acumulan desde el día 1 y no incluyen inversiones ni traspasos.':''].filter(Boolean).join(' ');
+  const aria='Tu dinero por día durante este mes';
   const visible=series.filter(item=>!prefs.hidden.includes(item.key));
   $('#money-chart-subtitle').textContent=subtitle;$('#money-chart-footnote').textContent=footnote;
   $('#money-chart-legend').innerHTML=series.map(item=>{const off=prefs.hidden.includes(item.key);return `<button type="button" class="legend-toggle ${off?'off':''}" data-key="${escapeHtml(item.key)}" aria-pressed="${!off}" title="${off?'Mostrar':'Ocultar'} esta línea"><i style="background:${item.color};height:${item.key==='total'?4:3}px"></i>${escapeHtml(item.label)}</button>`;}).join('');
-  const nothing=prefs.view==='balance'&&(prefs.include==='investments'&&!state.investments.length||prefs.include==='accounts'&&!state.accounts.length&&!state.movements.length);
-  if(nothing){$('#money-chart-legend').innerHTML='';$('#line-chart').innerHTML=`<p class="empty">${prefs.include==='investments'?'Aún no tienes inversiones. Agrégalas en «Inversiones».':'Aún no tienes cuentas. Agrégalas en «Cuentas».'}</p>`;$('#money-chart-readout').innerHTML='';return;}
+  if(!series.length){$('#line-chart').innerHTML=`<p class="empty">${(show.accounts||show.investments)&&!items.length?(show.investments&&!show.accounts?'Aún no tienes inversiones. Agrégalas en «Inversiones».':'Aún no tienes cuentas. Agrégalas en «Cuentas».'):'No elegiste nada para ver. Toca «Ajustar gráfica» y marca lo que quieras.'}</p>`;$('#money-chart-readout').innerHTML='';return;}
   $('#line-chart').innerHTML=visible.length?drawMonthChart(visible,info,prefs,aria):'<p class="empty">Todas las líneas están ocultas. Toca un nombre de la leyenda para mostrarla.</p>';
   const maxDay=visible.some(item=>item.projected)?info.days:info.todayDay;if(chartSelectedDay>maxDay)chartSelectedDay=null;
   const day=chartSelectedDay||info.todayDay,estimated=day>info.todayDay,dayName=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}).format(new Date(info.year,info.month,day));
-  $('#money-chart-readout').innerHTML=`<strong>${day===info.todayDay?`Hoy, ${dayName}`:dayName}${estimated?' (estimado)':''}:</strong> ${visible.map(item=>`<span><i style="background:${item.color}"></i>${escapeHtml(item.label)} ${money.format((estimated?item.projected?.[day-1]:item.values[day-1])??0)}</span>`).join('')}`;
+  const valueOn=item=>estimated?item.projected?.[day-1]:item.values[day-1];
+  $('#money-chart-readout').innerHTML=`<strong>${day===info.todayDay?`Hoy, ${dayName}`:dayName}${estimated?' (estimado)':''}:</strong> ${visible.filter(item=>valueOn(item)!==null&&valueOn(item)!==undefined).map(item=>`<span><i style="background:${item.color}"></i>${escapeHtml(item.label)} ${money.format(valueOn(item))}</span>`).join('')}`;
   $all('#money-chart-legend .legend-toggle').forEach(button=>button.onclick=()=>{const key=button.dataset.key,hidden=new Set(prefs.hidden);hidden.has(key)?hidden.delete(key):hidden.add(key);prefs.hidden=[...hidden];save();renderMoneyChart();});
   $all('#line-chart .chart-day').forEach(rect=>rect.onclick=()=>{chartSelectedDay=Number(rect.dataset.day);renderMoneyChart();});
 }
@@ -761,13 +800,12 @@ function applyFriendlyHelp(){
     [statLabel(0),'Tus ingresos del mes menos tus gastos del mes. No incluye el saldo que ya tenías en tus cuentas ni tus inversiones.'],
     [statLabel(1),'Todo el dinero que recibiste este mes: sueldo, ventas, regalos y otros ingresos.'],
     [statLabel(2),'El total de tus gastos de este mes.'],
-    [statLabel(3),'Dinero que destinaste a ahorro o inversión este mes. No se cuenta como gasto porque sigue siendo tuyo.'],
+    [statLabel(3),'Lo que aportaste a tus inversiones este mes. No es el valor total de tus inversiones (ese aparece en «Tu saldo hoy» y en «Inversiones»). No se cuenta como gasto porque sigue siendo tuyo.'],
     [$('.spending-card .card-title h3'),'Cómo se reparten tus gastos del mes. Cada color es una categoría (comida, renta, transporte…).'],
     [$('#money-chart-title'),'Muestra cuánto dinero tienes cada día del mes. Cada banco tiene su color y la línea gruesa es el total. El saldo que escribes al crear una cuenta es tu punto de partida, no un ingreso. Toca un día para ver sus cifras y toca un nombre para ocultar o mostrar su línea.'],
-    [$('#chart-view')?.closest('label'),'Saldo: cuánto dinero tienes en total y en cada banco. Ingresos y gastos: cuánto recibiste y cuánto gastaste en el mes.'],
-    [$('#chart-lines')?.closest('label'),'Elige si quieres ver cada banco por separado, solo el total o las dos cosas.'],
-    [$('#chart-group')?.closest('label'),'Banco: agrupa en una sola línea todas tus cuentas e inversiones del mismo banco. Cuenta o inversión: una línea para cada una.'],
-    [$('#chart-projection')?.closest('label'),'Muestra con línea punteada cuánto tendrías en lo que resta del mes: suma tu nómina y resta los pagos y ahorros que tienes planeados. Es una estimación.'],
+    [$('.chart-show legend'),'Marca todo lo que quieras ver al mismo tiempo: tus cuentas, tus inversiones, el total, y los ingresos, gastos y neto del mes. El estimado es la línea punteada de lo que resta del mes con tus planes recurrentes. También puedes tocar un nombre en la leyenda para ocultar esa línea.'],
+    [$('#movement-to-label'),'Para pagar tu tarjeta o pasar dinero entre tus cuentas. No cuenta como gasto ni como ingreso: baja el saldo de una cuenta y sube el de la otra (en una tarjeta, baja lo que debes).'],
+    [$('#chart-group')?.closest('label'),'Banco: junta en una línea tus cuentas del mismo banco; las tarjetas y las inversiones van en su propia línea. Cuenta o inversión: una línea para cada una.'],
     [$('#chart-scale')?.closest('label'),'Automática: se ajusta a tus cifras para que los cambios se aprecien mejor. Empezar en $0: la gráfica parte de cero. Manual: tú defines el mínimo y el máximo.'],
     // Movimientos
     [$('#movimientos .section-heading h2'),'Aquí registras lo que ya ocurrió: ingresos que ya recibiste y gastos que ya pagaste. Lo que esperas a futuro (tu nómina, la renta) se registra en Presupuestos → Plan recurrente.'],
@@ -957,28 +995,38 @@ function recurringExpenseSlices(){
     return {label:plan.title,value:Number(plan.amount)*monthlyFactor(plan.frequency),status,recurring:true};
   });
 }
+/* Lo que apartas cada mes para ahorro o inversión (no incluye pagos de tarjeta: lo que pagas con la tarjeta ya cuenta en tus límites y gastos) */
+function savingSlices(){
+  const toCard=plan=>state.accounts.some(account=>account.id===Number(plan.toAccountId)&&account.kind==='credit');
+  const plans=state.recurringPlans.filter(plan=>plan.type==='investment'&&!plan.cardTotal&&!toCard(plan)&&planIsActive(plan)).map(plan=>({label:plan.title,value:Number(plan.amount)*monthlyFactor(plan.frequency)}));
+  const funded=fundingPlans().map(plan=>({label:plan.title,value:Number(plan.amount)*monthlyFactor(plan.frequency)}));
+  const monthly=state.investments.filter(investment=>Number(investment.monthlyContribution)>0).map(investment=>({label:`Aportación a ${investmentName(investment)}`,value:Number(investment.monthlyContribution)}));
+  return [...plans,...funded,...monthly].filter(item=>item.value>0);
+}
 function renderBudgetPie(){
   const options=budgetSourceOptions(),selected=selectedBudgetSources(options),available=options.filter(option=>selected.has(option.key)).reduce((sum,option)=>sum+option.value,0);
   const RECURRING_COLORS=['#8a9a94','#a3b1ab','#6f817a','#b8c4bf'];
   const recurring=recurringExpenseSlices().map((item,index)=>({...item,color:RECURRING_COLORS[index%RECURRING_COLORS.length]}));
+  const SAVING_COLORS=['#5b8fc9','#7aa7d8','#4677ad','#9bbde3'],saving=savingSlices().map((item,index)=>({...item,color:SAVING_COLORS[index%SAVING_COLORS.length]})),saved=saving.reduce((sum,item)=>sum+item.value,0);
   const limits=state.budgets.map((budget,index)=>({label:budget.category,value:budgetMonthly(budget),spent:budgetSpent(budget),period:budget.period||'monthly',color:COLORS[index%COLORS.length],covers:overlapPlans(budget.category)}));
-  const fixed=recurring.reduce((sum,item)=>sum+item.value,0),limited=limits.reduce((sum,item)=>sum+item.value,0),assigned=fixed+limited,free=Math.max(0,available-assigned),base=Math.max(available,assigned);
-  let running=0;const parts=[...recurring.filter(item=>item.value>0),...limits.filter(item=>item.value>0),...(free>0?[{label:'Libre',value:free,color:'#dbe4df'}]:[])];
+  const fixed=recurring.reduce((sum,item)=>sum+item.value,0),limited=limits.reduce((sum,item)=>sum+item.value,0),assigned=fixed+limited+saved,free=Math.max(0,available-assigned),base=Math.max(available,assigned);
+  let running=0;const parts=[...recurring.filter(item=>item.value>0),...saving,...limits.filter(item=>item.value>0),...(free>0?[{label:'Libre',value:free,color:'#dbe4df'}]:[])];
   const slices=parts.map(item=>{const start=running;running+=item.value/base*100;return `${item.color} ${start}% ${running}%`;});
   $('#budget-pie').style.background=base>0?`conic-gradient(${slices.join(',')})`:'#e9eeea';
   $('#budget-pie-total').textContent=money.format(available);
-  $('#budget-pie').setAttribute('aria-label',`Disponible ${money.format(available)} al mes; gastos recurrentes ${money.format(fixed)}; límites ${money.format(limited)}.`);
+  $('#budget-pie').setAttribute('aria-label',`Disponible ${money.format(available)} al mes; gastos recurrentes ${money.format(fixed)}; ahorro e inversión ${money.format(saved)}; límites ${money.format(limited)}.`);
   const note=$('#budget-pie-note');note.classList.toggle('warn',assigned>available&&available>0);
   const doubled=options.filter(option=>selected.has(option.key)&&option.key.startsWith('plan-')).some(option=>{const plan=state.recurringPlans.find(item=>`plan-${item.id}`===option.key);return plan?.accountId&&selected.has(`account-${plan.accountId}`);});
   $('#budget-sources-warning').hidden=!doubled;
-  const what=fixed&&limited?'tus gastos recurrentes y tus límites':fixed?'tus gastos recurrentes':'tus límites';
+  const whatParts=[fixed?'tus gastos recurrentes':'',saved?'lo que apartas para ahorro o inversión':'',limited?'tus límites':''].filter(Boolean),what=whatParts.length>1?`${whatParts.slice(0,-1).join(', ')} y ${whatParts.at(-1)}`:whatParts[0]||'tus límites';
   const sourceNames=options.filter(option=>selected.has(option.key)).map(option=>option.key.startsWith('plan-')?state.recurringPlans.find(plan=>`plan-${plan.id}`===option.key)?.title||option.label:option.label);
   note.textContent=!available?'Elige abajo de dónde sale tu dinero.':assigned>available?`Entre ${what} suman ${money.format(assigned)} al mes: ${money.format(assigned-available)} más de lo que tienes disponible.`:assigned?`Te quedan ${money.format(free)} libres al mes después de ${what}.`:`Tienes ${money.format(available)} libres al mes.`;
   if(available)note.textContent=`Disponible al mes: ${sourceNames.join(' + ')} = ${money.format(available)}. `+note.textContent;
   const periodName={weekly:'esta semana',monthly:'este mes',yearly:'este año'};
   const recurringLegend=recurring.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · gasto recurrente · ${money.format(item.value)} al mes · ${item.status}</span>`).join('');
+  const savingLegend=saving.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · ahorro o inversión · ${money.format(item.value)} al mes</span>`).join('');
   const limitLegend=limits.map(item=>`<span class="legend-item"><i class="legend-dot" style="background:${item.color}"></i><strong>${escapeHtml(item.label)}</strong> · límite · ${money.format(item.value)} al mes · gastado ${periodName[item.period]||'este mes'}: ${money.format(item.spent)}${item.covers.length?` · ya incluye tu gasto recurrente «${escapeHtml(item.covers[0].title)}»`:''}</span>`).join('');
-  $('#budget-pie-legend').innerHTML=(recurring.length||limits.length?recurringLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
+  $('#budget-pie-legend').innerHTML=(recurring.length||limits.length||saving.length?recurringLegend+savingLegend+limitLegend:'<span class="legend-item">Aún no tienes gastos recurrentes ni límites. Crea uno con «＋ Plan recurrente» o «＋ Límite por categoría».</span>')+(free>0?`<span class="legend-item"><i class="legend-dot" style="background:#dbe4df;border:1px solid #b9c7c0"></i><strong>Libre</strong> · ${money.format(free)}</span>`:'');
   const groups=[...new Set(options.map(option=>option.group))];
   $('#budget-sources-list').innerHTML=options.length?groups.map(group=>`<h4>${escapeHtml(group.toUpperCase())}</h4>${options.filter(option=>option.group===group).map(option=>`<label class="check-label"><input type="checkbox" data-source="${option.key}" ${selected.has(option.key)?'checked':''} /> ${escapeHtml(option.label)} · ${money.format(option.value)}</label>`).join('')}`).join(''):'<p class="empty">Agrega un ingreso recurrente (como tu nómina), una cuenta o una inversión para calcular tu dinero disponible.</p>';
   $all('#budget-sources-list input[data-source]').forEach(input=>input.onchange=()=>{state.preferences.budgetSources=$all('#budget-sources-list input[data-source]:checked').map(box=>box.dataset.source);state.preferences.budgetSourcesKnown=options.map(option=>option.key);save();renderBudgetPie();});
@@ -986,18 +1034,19 @@ function renderBudgetPie(){
 /* Proyección de Presupuestos: usa todo lo de la pestaña; los límites cuentan como gasto completo */
 function renderBudgetProjection(){
   renderBudgetPie();
-  const savingsPlans=[...state.recurringPlans.filter(plan=>plan.type==='investment'),...fundingPlans()],monthlyLimits=state.budgets.reduce((sum,budget)=>sum+budgetMonthly(budget),0),monthlyContributions=state.investments.reduce((sum,investment)=>sum+(Number(investment.monthlyContribution)||0),0);
-  const hasData=state.recurringPlans.length||state.budgets.length||savingsPlans.length||monthlyContributions;
+  const isCardPayment=plan=>plan.type==='investment'&&state.accounts.some(account=>account.id===Number(plan.toAccountId)&&account.kind==='credit');
+  const cardPlans=state.recurringPlans.filter(isCardPayment),savingsPlans=[...state.recurringPlans.filter(plan=>plan.type==='investment'&&!isCardPayment(plan)),...fundingPlans()],monthlyLimits=state.budgets.reduce((sum,budget)=>sum+budgetMonthly(budget),0),monthlyContributions=state.investments.reduce((sum,investment)=>sum+(Number(investment.monthlyContribution)||0),0);
+  const hasData=state.recurringPlans.length||cardPlans.length||state.budgets.length||savingsPlans.length||monthlyContributions;
   if(!hasData){$('#recurring-projection').innerHTML='<p class="empty">Agrega ingresos o gastos recurrentes, o límites por categoría, para ver tu proyección.</p>';$('#recurring-chart').innerHTML='';return;}
-  const rows=Array.from({length:13},(_,months)=>{const target=addMonthsClamped(today,months),sum=list=>months===0?0:list.reduce((total,plan)=>total+(plan.cardTotal?cardTotalPayments(plan,iso(target)).reduce((sum,item)=>sum+item.amount,0):countPlanTo(plan,target)*Number(plan.amount)),0);const income=sum(state.recurringPlans.filter(plan=>plan.type==='income')),planned=sum(state.recurringPlans.filter(plan=>plan.type==='expense')),limits=monthlyLimits*months,savings=sum(savingsPlans)+monthlyContributions*months;return{months,income,planned,limits,savings,left:income-planned-limits-savings};});
-  $('#recurring-projection').innerHTML=`${projectionOverlapNote()}<div class="projection-table-wrap"><table class="projection-table"><thead><tr><th>Próximos</th><th>Ingresos</th><th>Gastos planeados</th><th>Límites (gasto esperado)</th><th>Ahorro e inversión</th><th>Te queda</th></tr></thead><tbody>${rows.filter(row=>[1,3,6,12].includes(row.months)).map(row=>`<tr><th>${row.months===1?'1 mes':`${row.months} meses`}</th><td>${money.format(row.income)}</td><td>${money.format(row.planned)}</td><td>${money.format(row.limits)}</td><td>${money.format(row.savings)}</td><td class="${row.left<0?'negative':'positive'}"><strong>${money.format(row.left)}</strong></td></tr>`).join('')}</tbody></table></div>`;
-  const series=[{key:'income',label:'Ingresos',color:'#278373',width:3,value:row=>row.income},{key:'spend',label:'Gastos planeados + límites',color:'#e08a3c',width:3,value:row=>row.planned+row.limits},{key:'savings',label:'Ahorro e inversión',color:'#3b82c4',width:3,value:row=>row.savings},{key:'left',label:'Te queda',color:'#146c5b',width:4.5,value:row=>row.left}];
-  const W=900,H=300,L=88,R=22,T=24,B=42,plotW=W-L-R,plotH=H-T-B,all=rows.flatMap(row=>series.map(item=>item.value(row))),{low,high,step}=niceScale(Math.min(0,...all),Math.max(0,...all));
+  const rows=Array.from({length:13},(_,months)=>{const target=addMonthsClamped(today,months),sum=list=>months===0?0:list.reduce((total,plan)=>total+(plan.cardTotal?cardTotalPayments(plan,iso(target)).reduce((sum,item)=>sum+item.amount,0):countPlanTo(plan,target)*Number(plan.amount)),0);const income=sum(state.recurringPlans.filter(plan=>plan.type==='income')),planned=sum(state.recurringPlans.filter(plan=>plan.type==='expense')),limits=monthlyLimits*months,savings=sum(savingsPlans)+monthlyContributions*months,cards=sum(cardPlans);return{months,income,planned,limits,savings,cards,left:income-planned-limits-savings-cards};});
+  $('#recurring-projection').innerHTML=`${projectionOverlapNote()}<div class="projection-table-wrap"><table class="projection-table"><thead><tr><th>Próximos</th><th>Ingresos</th><th>Gastos planeados</th><th>Límites (gasto esperado)</th><th>Ahorro e inversión</th>${cardPlans.length?'<th>Pago de tarjetas</th>':''}<th>Te queda</th></tr></thead><tbody>${rows.filter(row=>[1,3,6,12].includes(row.months)).map(row=>`<tr><th>${row.months===1?'1 mes':`${row.months} meses`}</th><td>${money.format(row.income)}</td><td>${money.format(row.planned)}</td><td>${money.format(row.limits)}</td><td>${money.format(row.savings)}</td>${cardPlans.length?`<td>${money.format(row.cards)}</td>`:''}<td class="${row.left<0?'negative':'positive'}"><strong>${money.format(row.left)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+  const series=[{key:'income',label:'Ingresos',color:'#278373',width:3,value:row=>row.income},{key:'spend',label:'Gastos planeados + límites',color:'#e08a3c',width:3,value:row=>row.planned+row.limits},{key:'savings',label:'Ahorro e inversión',color:'#3b82c4',width:3,value:row=>row.savings},...(cardPlans.length?[{key:'cards',label:'Pago de tarjetas',color:'#c0559b',width:3,value:row=>row.cards}]:[]),{key:'left',label:'Te queda',color:'#146c5b',width:4.5,value:row=>row.left}];
+  const fs=chartFont(),W=900,H=Math.round(300*Math.min(1.6,Math.max(1,chartScale()*0.75))),L=Math.max(88,Math.round(fs*4.4)),R=22,T=24,B=Math.max(42,fs*2+12),plotW=W-L-R,plotH=H-T-B,all=rows.flatMap(row=>series.map(item=>item.value(row))),{low,high,step}=niceScale(Math.min(0,...all),Math.max(0,...all));
   const x=index=>L+index/(rows.length-1)*plotW,y=value=>T+(high-value)/(high-low)*plotH;
-  const grid=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)grid.push(`<line x1="${L}" y1="${y(value)}" x2="${W-R}" y2="${y(value)}" stroke="#dfe8e2"/><text x="${L-8}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="11">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`);
+  const grid=[];for(let value=high,guard=0;value>=low-step/2&&guard<12;value-=step,guard++)grid.push(`<line x1="${L}" y1="${y(value)}" x2="${W-R}" y2="${y(value)}" stroke="#dfe8e2"/><text x="${L-8}" y="${y(value)+4}" text-anchor="end" fill="#80928c" font-size="${fs}">${axisMoney.format(Math.abs(value)<1e-9?0:value)}</text>`);
   const zero=low<0?`<line x1="${L}" y1="${y(0)}" x2="${W-R}" y2="${y(0)}" stroke="#aab9b2" stroke-width="1.2"/>`:'';
   const paths=series.map(item=>`<path d="${rows.map((row,index)=>`${index?'L':'M'} ${x(index)} ${y(item.value(row))}`).join(' ')}" fill="none" stroke="${item.color}" stroke-width="${item.width}" stroke-linejoin="round"/>${rows.map((row,index)=>`<circle cx="${x(index)}" cy="${y(item.value(row))}" r="3" fill="${item.color}"><title>${index?`${index} m`:'Hoy'} · ${item.label}: ${money.format(item.value(row))}</title></circle>`).join('')}`).join('');
-  const labels=rows.map((row,index)=>`<text x="${x(index)}" y="${H-12}" text-anchor="middle" fill="#80928c" font-size="11">${index?`${index} m`:'Hoy'}</text>`).join('');
+  const labels=rows.map((row,index)=>index%(fs>16?2:1)===0||index===rows.length-1?`<text x="${x(index)}" y="${H-Math.round(fs*0.5)}" text-anchor="${index===0?'start':index===rows.length-1?'end':'middle'}" fill="#80928c" font-size="${fs}">${index?`${index} m`:'Hoy'}</text>`:'').join('');
   $('#recurring-chart').innerHTML=`<div class="investment-forecast"><div class="line-legend">${series.map(item=>`<span><i style="background:${item.color}"></i>${item.label}</span>`).join('')}</div><p>Eje horizontal: meses desde hoy · eje vertical: pesos acumulados. Los límites se cuentan como si los gastaras completos.</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Proyección de ingresos, gastos, ahorro y lo que te queda">${grid.join('')}${zero}${paths}${labels}</svg></div>`;
 }
 
@@ -1039,7 +1088,7 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape')closeHelpPop
 const TUTORIAL_STEPS=[
   {icon:'👋',title:'Bienvenido a Claro',text:'Claro te ayuda a ver cuánto dinero tienes, en qué lo usas y cuánto tendrás en los próximos meses. Tus datos se guardan solo en este dispositivo y nadie más tiene acceso a ellos.'},
   {icon:'🏦',title:'1. Agrega tus cuentas',text:'En «Cuentas», toca «＋ Agregar cuenta» y escribe cuánto tienes hoy en cada banco. Puedes elegir si es de débito o tarjeta de crédito, y si te paga intereses.',page:'capital',action:'Ir a mis cuentas'},
-  {icon:'🧾',title:'2. Registra tus gastos e ingresos',text:'Toca «＋ Movimiento real» cada vez que hagas un pago o recibas dinero. Elige la cuenta para que su saldo se actualice automáticamente.',page:'movimientos',action:'Ir a Movimientos'},
+  {icon:'🧾',title:'2. Registra tus gastos e ingresos',text:'Toca «＋ Agregar movimiento» cada vez que hagas un pago o recibas dinero. Elige la cuenta para que su saldo se actualice automáticamente.',page:'movimientos',action:'Ir a Movimientos'},
   {icon:'🔁',title:'3. Planea lo que se repite',text:'En «Presupuestos» agrega tu nómina, la renta o tus suscripciones como planes recurrentes, y define límites por categoría. Claro te muestra cuánto te queda libre al mes.',page:'presupuestos',action:'Ir a Presupuestos'},
   {icon:'📈',title:'4. Haz crecer tu dinero',text:'En «Inversiones» registra tus inversiones con su tasa y plazo. Verás una proyección de cuánto tendrás. En «Metas» puedes ahorrar para un objetivo específico.',page:'capital',action:'Ir a Inversiones'},
   {icon:'💡',title:'5. Revisa y respalda',text:'En «Resumen» ves la gráfica de tu dinero del mes. Si tienes dudas, toca cualquier «?». Además, descarga un respaldo con regularidad desde Configuración para no perder tus datos.',page:'inicio',action:'Ir al Resumen'}
@@ -1134,7 +1183,7 @@ function cardMonthDays(account,type){
 }
 function cardChartMarks(info,x,top,plotH){
   const marks=[];state.accounts.filter(account=>account.kind==='credit').forEach(account=>{[['cut','Corte','#b08a2e'],['due','Pago','#c94d45']].forEach(([type,word,color])=>cardMonthDays(account,type).forEach(d=>marks.push({d,text:`${word} ${account.name}`,color,title:`${type==='cut'?'Fecha de corte':'Fecha límite de pago'} · ${accountLabel(account.id)} · día ${d}`})));});
-  return marks.sort((a,b)=>a.d-b.d).map((mark,index)=>`<g class="card-mark"><line x1="${x(mark.d)}" y1="${top}" x2="${x(mark.d)}" y2="${top+plotH}" stroke="${mark.color}" stroke-width="1.4" stroke-dasharray="2 3" opacity=".9"/><text x="${x(mark.d)+4}" y="${top+30+(index%3)*13}" fill="${mark.color}" font-size="13" font-weight="700">${escapeHtml(mark.text)}</text><title>${escapeHtml(mark.title)}</title></g>`).join('');
+  return marks.sort((a,b)=>a.d-b.d).map((mark,index)=>`<g class="card-mark"><line x1="${x(mark.d)}" y1="${top}" x2="${x(mark.d)}" y2="${top+plotH}" stroke="${mark.color}" stroke-width="1.4" stroke-dasharray="2 3" opacity=".9"/><text x="${x(mark.d)+4}" y="${top+chartFont()*2+(index%3)*chartFont(13)}" fill="${mark.color}" font-size="${chartFont(13)}" font-weight="700">${escapeHtml(mark.text)}</text><title>${escapeHtml(mark.title)}</title></g>`).join('');
 }
 function cardWhen(event){return event.daysLeft===0?'hoy':event.daysLeft===1?'mañana':`en ${event.daysLeft} días`;}
 function cardReminderMarkup(){
@@ -1155,10 +1204,11 @@ function renderTotalBalance(){
   $('#total-balance-value').textContent=money.format(total);
   const parts=[];
   if(!state.accounts.length)parts.push('Agrega tus cuentas en «Cuentas» para ver aquí tu saldo.');
-  else{parts.push(`En tus cuentas: ${money.format(have)}`);if(credit.length)parts.push(`tarjetas: ${money.format(-owe)}`);}
+  else{parts.push(`En tus cuentas: ${money.format(have)}`);if(credit.length)parts.push(`tarjetas: ${owe?money.format(-owe):money.format(0)}`);}
   if(invested)parts.push(`inversiones aparte: ${money.format(invested)}`);
   $('#total-balance-note').textContent=parts.join(' · ');
 }
 setup();
 setupTutorial();
+let lastChartWidth=window.innerWidth,resizeTimer=null;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(Math.abs(window.innerWidth-lastChartWidth)>40){lastChartWidth=window.innerWidth;renderAll();}},250);});
 setupReminderRepeat();
