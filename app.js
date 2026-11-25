@@ -293,7 +293,7 @@ function setup(){
   addRecurringInvestmentSelect();
   compactHelp();
   populateGoalInvestmentChoices();syncGoalLink();$('#goal-form').elements.linkType.onchange=syncGoalLink;
-  applyTheme(localStorage.getItem(THEME_STORE)||'light');
+  applyTheme(localStorage.getItem(THEME_STORE)||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',event=>{if(!localStorage.getItem(THEME_STORE))applyTheme(event.matches?'dark':'light');});
   $('#theme-button').onclick=()=>{const next=document.body.dataset.theme==='dark'?'light':'dark';localStorage.setItem(THEME_STORE,next);applyTheme(next);};
   $('#reflect-default').checked=Boolean(state.preferences.reflectInvestments);
   $('#reflect-default').onchange=()=>{state.preferences.reflectInvestments=$('#reflect-default').checked;save();toast('Preferencia actualizada.');};

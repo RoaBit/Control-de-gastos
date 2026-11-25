@@ -25,3 +25,24 @@
 .tutorial-dialog{width:min(420px,calc(100% - 32px));text-align:center}.tutorial-dialog .dialog-head{align-items:center}.tutorial-icon{font-size:42px;line-height:1;margin:8px 0 10px}.tutorial-dialog h2{margin:0 0 8px}.tutorial-dialog p{color:var(--muted);line-height:1.55;margin:0 0 12px;font-size:14px}.tutorial-go{background:none;border:0;color:var(--green);font-weight:750;cursor:pointer;padding:4px;font-size:13px}.tutorial-dots{display:flex;justify-content:center;gap:6px;margin:14px 0}.tutorial-dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}.tutorial-dots i.active{background:var(--green);width:18px;border-radius:4px}.tutorial-actions{display:flex;justify-content:space-between;gap:10px}.tutorial-actions .primary-button{margin-left:auto}
 .tutorial-dialog{padding:20px 20px 18px!important;border-radius:18px}.tutorial-dialog .eyebrow{margin:0}.tutorial-actions .primary-button{width:auto;padding-inline:22px}
 .help-popover{letter-spacing:normal;font-family:inherit;text-transform:none}
+/* Modo oscuro: textos legibles en formularios, avisos, ayudas y tutorial */
+body[data-theme="dark"]{color-scheme:dark;--muted:#a9bcb5}
+body[data-theme="dark"] label,body[data-theme="dark"] .label-line,body[data-theme="dark"] .check-label{color:#c3d3cd}
+body[data-theme="dark"] input::placeholder,body[data-theme="dark"] textarea::placeholder{color:#8fa39c}
+body[data-theme="dark"] .help-bubble{border-color:#6fc3ad;color:#8fd8c4;background:transparent}
+body[data-theme="dark"] .help-popover{background:#22322d;border-color:#3d544c;color:#e6efeb;box-shadow:0 5px 18px #0007}
+body[data-theme="dark"] .form-note{background:#1f2f2a;border-color:#35504a;color:#cfe3da}
+body[data-theme="dark"] .form-warning,body[data-theme="dark"] .repay-box{background:#3a2a1a;border-color:#6b4c2c}
+body[data-theme="dark"] .form-warning,body[data-theme="dark"] .repay-box p{color:#f6d2a8!important}
+body[data-theme="dark"] .budget-pie-note.warn{color:#f3b27a}
+body[data-theme="dark"] .backup-reminder{background:#3a2f17;border-color:#6d5726;color:#f4dfaa}
+body[data-theme="dark"] .backup-reminder .small-button:not(.primary-small){color:#f4dfaa;border-color:#6d5726;background:transparent}
+body[data-theme="dark"] .danger-button{color:#f2a39b;border-color:#6b3a36}
+body[data-theme="dark"] .tutorial-dialog p{color:#c3d3cd}
+body[data-theme="dark"] .tutorial-dots i{background:#3d544c}
+body[data-theme="dark"] .tutorial-dots i.active,body[data-theme="dark"] .tutorial-go{color:#8fd8c4}
+body[data-theme="dark"] .tutorial-dots i.active{background:#4fb89e}
+body[data-theme="dark"] .text-link,body[data-theme="dark"] .budget-sources-picker summary{color:#8fd8c4}
+body[data-theme="dark"] .eyebrow{color:#a9bcb5}
+body[data-theme="dark"] .update-banner{background:#e6efeb;color:#101a18}
+.legal-card p{color:var(--ink)}.legal-updated{color:var(--ink);opacity:.8}
