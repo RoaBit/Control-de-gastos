@@ -137,7 +137,6 @@ function renderCapital(){
   $all('.edit-account').forEach(button=>button.onclick=()=>editAccount(Number(button.dataset.id)));
   $all('.delete-account').forEach(button=>button.onclick=()=>{const account=state.accounts.find(item=>item.id===Number(button.dataset.id));if(account&&confirm(`¿Eliminar la cuenta “${account.name}”? Sus movimientos se conservan, pero quedarán sin cuenta.`)){state.accounts=state.accounts.filter(item=>item.id!==account.id);state.movements.forEach(movement=>{if(Number(movement.accountId)===account.id)movement.accountId=null;});[...state.recurringPlans,...state.investments].forEach(item=>{if(Number(item.accountId)===account.id)item.accountId=null;if(Number(item.toAccountId)===account.id)item.toAccountId=null;});save();renderAll();toast('Cuenta eliminada.');}});
   renderInvestmentPortfolio(metrics,invested,portfolio);
-  const contributionHeader=$('#projection-list .projection-table thead th:last-child');if(contributionHeader)contributionHeader.textContent='Con aportaciones planeadas';
   const projectionHelp=$('.portfolio-grid .projection-card .card-title p');if(projectionHelp)projectionHelp.textContent='Estimación a 3, 6 y 12 meses y al plazo configurado de cada inversión.';
 }
 /* Portafolio: inversiones y cuentas de banco (también tienen flujo de dinero y pueden pagar intereses). */
@@ -181,7 +180,11 @@ function renderPortfolioChart(metrics,invested,portfolio){
   const legend=`<div class="projection-lines-legend"><span><i style="background:#146c5b"></i>Total</span>${entries.map(entry=>`<span><i style="background:${entry.color}"></i>${escapeHtml(entry.label)}</span>`).join('')}</div>`;
   const chart=`<div class="investment-forecast"><p>${unitName} desde hoy · MXN estimados. Línea continua: inversiones · línea punteada: cuentas de banco (con tu nómina, gastos y pagos planeados, e intereses si la cuenta los paga). Toca un punto para ver la distribución.</p>${legend}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Proyección estimada del total, tus cuentas y tus inversiones">${grid}${zero}${productLines}<path d="${totalPath}" fill="none" stroke="#146c5b" stroke-width="4"/>${dots}</svg></div>`;
   const selected=points[selectedPortfolioPointIndex];
-  $('#projection-list').innerHTML=chart+`<p class="projection-selected">Distribución seleccionada: <strong>${selected.label}</strong> · ${money.format(selected.total)}</p>`;
+  const lastIndex=points.length-1,cols=[0,...(selectedPortfolioPointIndex>0&&selectedPortfolioPointIndex<lastIndex?[selectedPortfolioPointIndex]:[]),lastIndex];
+  const colName=index=>index===0?'Hoy':`${new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short',year:'numeric'}).format(dates[index])}`;
+  const cell=value=>value<0?`<span class="negative">debes ${money.format(-value)}</span>`:money.format(value);
+  const balances=`<div class="projection-table-wrap account-balances"><table class="projection-table"><thead><tr><th>Saldo por cuenta</th>${cols.map(index=>`<th>${colName(index)}</th>`).join('')}</tr></thead><tbody>${entries.map((entry,entryIndex)=>`<tr><th><i class="legend-dot" style="background:${entry.color}"></i> ${escapeHtml(entry.label)}</th>${cols.map(index=>`<td>${cell(points[index].values[entryIndex])}</td>`).join('')}</tr>`).join('')}<tr class="total-row"><th>Total</th>${cols.map(index=>`<td><strong>${money.format(points[index].total)}</strong></td>`).join('')}</tr></tbody></table></div>`;
+  $('#projection-list').innerHTML=chart+balances+`<p class="projection-selected">Distribución seleccionada: <strong>${selected.label}</strong> · ${money.format(selected.total)}</p>`;
   renderPortfolioDistribution(selected,entries);
   $all('.projection-point').forEach(dot=>dot.onclick=()=>{selectedPortfolioPointIndex=Number(dot.dataset.point);renderInvestmentPortfolio(metrics,invested,portfolio);});
 }

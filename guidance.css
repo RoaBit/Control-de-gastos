@@ -50,3 +50,4 @@ body[data-theme="dark"] .toast{background:#e6efeb;color:#101a18;box-shadow:0 8px
 body[data-theme="dark"] .reminder-date{color:#8fd8c4}
 .stat-card.total-balance{grid-column:1/-1}.stat-card.total-balance strong{font-size:34px}.stat-card.total-balance small{color:#d9ece6}.stat-card.month-net{background:var(--card);border-color:var(--line);color:var(--ink)}
 .backup-reminder{margin-top:16px}
+.account-balances{margin-top:14px}.account-balances tbody th{white-space:normal;min-width:110px}.account-balances .legend-dot{display:inline-block;vertical-align:middle}.account-balances .total-row th,.account-balances .total-row td{border-top:2px solid var(--line);border-bottom:0}
