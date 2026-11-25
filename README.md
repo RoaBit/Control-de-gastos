@@ -20,7 +20,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
 - Gráfica de proyección en días, meses o años con una línea por producto y una línea total destacada.
 - Tope opcional a las aportaciones de capital; el excedente de aportaciones planeadas puede redirigirse a otra inversión.
-- Metas vinculables a una inversión, a sus intereses estimados o al portafolio completo; el vínculo solo muestra progreso, no aparta dinero.
+- Metas vinculables a una cuenta de banco (usa su saldo de hoy), a una inversión, a sus intereses estimados o al portafolio completo; el vínculo solo muestra progreso, no aparta dinero.
 - Tasas fijas o variables, capitalización, impuestos, comisiones y registro de aportaciones/retiros.
 - Exportación e importación de respaldo en JSON, con un aviso en el inicio si llevas más de 14 días sin descargar uno.
 - Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se puede ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
