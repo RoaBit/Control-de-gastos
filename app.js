@@ -597,7 +597,7 @@ function setInvestmentPlanFields(investment=null){
   syncFunding();
 }
 /* Gráfica principal: todo tu dinero del día 1 al último día del mes */
-const CHART_DEFAULTS={view:'balance',lines:'both',group:'bank',scale:'auto',min:'',max:'',projection:'on',hidden:[]};
+const CHART_DEFAULTS={include:'all',view:'balance',lines:'both',group:'bank',scale:'auto',min:'',max:'',projection:'on',hidden:[]};
 const LINE_COLORS=['#3b82c4','#e08a3c','#8a6fd1','#d0574f','#2e9c72','#b8901c','#3fa7bd','#c0559b'];
 const axisMoney=new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',notation:'compact',maximumFractionDigits:1});
 let lastChartRange=null,chartSelectedDay=null;
@@ -608,6 +608,7 @@ function syncMoneyChartControls(){
   if($('#chart-min')!==document.activeElement)$('#chart-min').value=prefs.min;
   if($('#chart-max')!==document.activeElement)$('#chart-max').value=prefs.max;
   $all('#chart-controls .balance-only').forEach(element=>element.hidden=prefs.view!=='balance');
+  const chips=$('#chart-include');if(chips){chips.hidden=prefs.view!=='balance';$all('#chart-include button').forEach(button=>{const on=button.dataset.include===prefs.include;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});}
   $all('#chart-controls .manual-only').forEach(element=>element.hidden=prefs.scale!=='manual');
 }
 function setupMoneyChartControls(){
@@ -619,6 +620,7 @@ function setupMoneyChartControls(){
     if(key==='group'||key==='view')prefs.hidden=[];
     save();syncMoneyChartControls();renderMoneyChart();
   }));
+  $all('#chart-include button').forEach(button=>button.onclick=()=>{const prefs=chartPrefs();prefs.include=button.dataset.include;prefs.hidden=[];chartSelectedDay=null;save();syncMoneyChartControls();renderMoneyChart();});
   syncMoneyChartControls();
 }
 function monthInfo(){
@@ -717,17 +719,20 @@ function renderMoneyChart(){
     series=flowSeries(info);subtitle='Ingresos y gastos acumulados, del día 1 al último día del mes';footnote='Eje horizontal: día del mes · Eje vertical: pesos. No incluye saldos de cuentas ni inversiones.';aria='Ingresos, gastos y neto acumulados por día durante este mes';
   }else{
     const showProjection=prefs.projection!=='off';
-    const groups=groupItems(balanceItems(info),prefs.group).map((item,index)=>({key:item.id,label:item.label,color:LINE_COLORS[index%LINE_COLORS.length],width:2.5,values:item.values,projected:showProjection&&info.todayDay<info.days?item.projected:null}));
+    const include=prefs.include||'all',items=balanceItems(info).filter(item=>include==='all'||(include==='investments'?item.id.startsWith('i'):!item.id.startsWith('i')));
+    const groups=groupItems(items,prefs.group).map((item,index)=>({key:item.id,label:item.label,color:LINE_COLORS[index%LINE_COLORS.length],width:2.5,values:item.values,projected:showProjection&&info.todayDay<info.days?item.projected:null}));
     const sum=pick=>Array.from({length:info.days},(_,index)=>{const parts=groups.map(item=>pick(item)?.[index]);return parts.some(value=>value===null||value===undefined)?null:parts.reduce((total,value)=>total+value,0);});
     const total={key:'total',label:'Total',color:'#146c5b',width:4.5,values:sum(item=>item.values),projected:showProjection&&info.todayDay<info.days?sum(item=>item.projected):null};
     series=prefs.lines==='total'?[total]:prefs.lines==='groups'?groups:[...groups,total];
     subtitle=prefs.lines==='total'?'Total de tu dinero, del día 1 al último día del mes':`Saldo de cada ${prefs.group==='bank'?'banco':'cuenta e inversión'}${prefs.lines==='both'?' y el total':''}, del día 1 al último día del mes`;
     footnote=(cardFootnote()?cardFootnote()+' ':'')+(state.accounts.length||state.investments.length?`Las cuentas empiezan con el saldo que registraste (no cuenta como ingreso).${showProjection?' La línea punteada después de hoy es una estimación con tus planes recurrentes: la nómina suma en su cuenta y lo que apartas para inversiones o pagos se resta de la cuenta conectada.':''}`:'Agrega tus cuentas en Inversiones → Cuentas para ver el saldo de cada banco. Mientras tanto, se muestra el neto de tus movimientos.');
-    aria='Saldo de tu dinero por día durante este mes';
+    aria='Saldo de tu dinero por día durante este mes';if(prefs.include==='accounts')subtitle+=' · solo cuentas';else if(prefs.include==='investments')subtitle+=' · solo inversiones';
   }
   const visible=series.filter(item=>!prefs.hidden.includes(item.key));
   $('#money-chart-subtitle').textContent=subtitle;$('#money-chart-footnote').textContent=footnote;
   $('#money-chart-legend').innerHTML=series.map(item=>{const off=prefs.hidden.includes(item.key);return `<button type="button" class="legend-toggle ${off?'off':''}" data-key="${escapeHtml(item.key)}" aria-pressed="${!off}" title="${off?'Mostrar':'Ocultar'} esta línea"><i style="background:${item.color};height:${item.key==='total'?4:3}px"></i>${escapeHtml(item.label)}</button>`;}).join('');
+  const nothing=prefs.view==='balance'&&(prefs.include==='investments'&&!state.investments.length||prefs.include==='accounts'&&!state.accounts.length&&!state.movements.length);
+  if(nothing){$('#money-chart-legend').innerHTML='';$('#line-chart').innerHTML=`<p class="empty">${prefs.include==='investments'?'Aún no tienes inversiones. Agrégalas en «Inversiones».':'Aún no tienes cuentas. Agrégalas en «Cuentas».'}</p>`;$('#money-chart-readout').innerHTML='';return;}
   $('#line-chart').innerHTML=visible.length?drawMonthChart(visible,info,prefs,aria):'<p class="empty">Todas las líneas están ocultas. Toca un nombre de la leyenda para mostrarla.</p>';
   const maxDay=visible.some(item=>item.projected)?info.days:info.todayDay;if(chartSelectedDay>maxDay)chartSelectedDay=null;
   const day=chartSelectedDay||info.todayDay,estimated=day>info.todayDay,dayName=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}).format(new Date(info.year,info.month,day));

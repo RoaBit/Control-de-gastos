@@ -26,7 +26,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Metas con origen y destino: el ahorro sale de una cuenta (por ejemplo, la nómina) y se guarda en una cuenta de débito o en una inversión; su saldo cuenta como avance. También se pueden vincular a una inversión, a sus intereses estimados o al portafolio completo; el vínculo solo muestra progreso, no aparta dinero.
 - Tasas fijas o variables, capitalización, impuestos, comisiones y registro de aportaciones/retiros.
 - Exportación e importación de respaldo en JSON, con un aviso en el inicio si llevas más de 14 días sin descargar uno.
-- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se puede ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
+- Gráfica principal con el saldo diario de cada banco (o cuenta/inversión) y el total, del día 1 al último día del mes; se puede elegir Todo, Solo cuentas o Solo inversiones, ajustar qué líneas ver y la escala del eje vertical. El saldo de una cuenta es su punto de partida, no un ingreso.
 - Movimientos, planes recurrentes (por ejemplo, la nómina) e inversiones conectables a una cuenta de banco. Después de hoy, la gráfica principal muestra con línea punteada un estimado del saldo con esos planes.
 - Aportaciones futuras de una inversión en una sola opción: ninguna, monto fijo mensual o apartar de un ingreso recurrente.
 - Inversiones que se pagan con un ingreso recurrente y proyección a 1 año por defecto.
