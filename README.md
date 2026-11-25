@@ -47,7 +47,7 @@ La app incluye una página de privacidad, términos y aviso financiero en `legal
 
 ## Publicación
 
-La app se publica con GitHub Pages desde la rama `main`. Cada cambio en `main` se publica solo en uno o dos minutos. Al cambiar archivos, sube el número de versión en `service-worker.js` (`claro-vNN`) para que la app instalada avise que hay una versión nueva.
+La app se publica con GitHub Pages desde la rama `main`. Cada cambio en `main` se publica solo en uno o dos minutos. Al cambiar archivos, sube el número de versión en `service-worker.js` (`claro-vNN`). La app busca siempre primero la versión más nueva en internet, usa la copia guardada solo sin conexión y se actualiza sola al abrirla.
 
 ## Contacto
 

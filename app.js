@@ -361,12 +361,14 @@ function setup(){
 }
 function registerServiceWorker(){
   if(!('serviceWorker'in navigator))return;
-  let reloading=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;location.reload();});
-  navigator.serviceWorker.register('./service-worker.js').then(registration=>{
-    const offer=worker=>{if(!worker||!navigator.serviceWorker.controller)return;$('#update-banner').hidden=false;$('#update-button').onclick=()=>{$('#update-button').disabled=true;worker.postMessage('SKIP_WAITING');};};
-    if(registration.waiting)offer(registration.waiting);
-    registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker&&worker.addEventListener('statechange',()=>{if(worker.state==='installed')offer(worker);});});
+  let reloading=false;const hadController=Boolean(navigator.serviceWorker.controller);
+  // Al llegar una versión nueva, la app se recarga sola; si estás llenando un formulario, te deja un botón para hacerlo cuando quieras.
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading||!hadController)return;if(document.querySelector('dialog[open]')){$('#update-banner').hidden=false;$('#update-button').onclick=()=>{reloading=true;location.reload();};return;}reloading=true;location.reload();});
+  navigator.serviceWorker.register('./service-worker.js',{updateViaCache:'none'}).then(registration=>{
+    if(registration.waiting)registration.waiting.postMessage('SKIP_WAITING');
+    const check=()=>registration.update().catch(()=>{});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check();});
+    setInterval(check,30*60*1000);
   }).catch(()=>{});
 }
 function showReminder(title,body){
