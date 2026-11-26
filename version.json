@@ -1,6 +1,6 @@
 {
- "id": "ea9755ddc15a",
- "label": "26/11/2026 10:34",
+ "id": "dd23795e7977",
+ "label": "26/11/2026 11:05",
  "files": {
   "./index.html": {
    "hash": "c672ace90197dde44e4a37f221ecd52db2ab5e0936a6606330af568ff55c82ac",
@@ -38,9 +38,9 @@
    "download": 287
   },
   "./icon.svg": {
-   "hash": "9e109e4e1e10673c1f8439604d76877fbdc692c088d438833a1f6b620e2d969b",
-   "size": 8077,
-   "download": 2258
+   "hash": "dea5015f2a5b56eed9a666d628004ef349d630eac24b0a643566a6be3bce04de",
+   "size": 303,
+   "download": 232
   },
   "./icon-192.png": {
    "hash": "292d1230bae0608568d9d40a6e51274d6e667b0d281de002531a5f2051bbc55f",
