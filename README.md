@@ -22,6 +22,7 @@ Tus datos se guardan solo en tu dispositivo. Descarga un respaldo de vez en cuan
 - Si un movimiento es del mismo día (o antes) que el saldo registrado de la cuenta, la app pregunta si ya estaba incluido o si debe restarse, y recuerda la respuesta para esa cuenta.
 - En todas las gráficas de líneas puedes tocar un nombre de la leyenda para ocultar o mostrar esa línea; la explicación de cada gráfica está en su «?».
 - Gastos por categoría de hoy, esta semana, esta quincena, este mes o este año.
+- «Comparar» en Movimientos: elige semana, quincena, mes, año o fechas libres y compara dos periodos (por ejemplo, esta semana contra la anterior o este diciembre contra el pasado). Muestra ingresos, gastos, ahorro y aportaciones lado a lado, la diferencia por categoría y una frase con el cambio principal. Si un periodo aún no termina, compara los mismos días de cada uno. En el Resumen, la tarjeta «Este mes vs. el anterior».
 - Plan recurrente para pagar el total de la tarjeta: el monto es lo que debes al corte y el pago queda entre el corte y la fecha límite.
 - Portafolio por banco/producto y distribución que se actualiza al seleccionar un punto de la proyección.
 - Gráfica de proyección de inversiones (solo inversiones, sin cuentas de débito ni crédito) en días, meses o años, con una línea por producto, una línea total y una tabla con el valor de cada inversión.

@@ -96,7 +96,7 @@ function renderDashboard(){
   $('#saving-note').textContent='No es el valor total de tus inversiones';
   $('.month-label').textContent=new Intl.DateTimeFormat('es-MX',{month:'long',year:'numeric'}).format(today).toUpperCase();
   $('.welcome h2').innerHTML='Tu dinero, claro <span>✦</span>';
-  renderCategories(); renderBudgets(); renderRecent(); renderMoneyChart(); renderRecurring();
+  renderCategories(); renderBudgets(); renderRecent(); renderMoneyChart(); renderRecurring(); renderHomeCompare();
 }
 /* Periodo de la gráfica de gastos por categoría */
 const CATEGORY_PERIODS={day:['Hoy','de hoy'],week:['Esta semana','de esta semana'],fortnight:['Esta quincena','de esta quincena'],month:['Este mes','de este mes'],year:['Este año','de este año']};
@@ -287,7 +287,7 @@ function syncTransferFields(){
 }
 function syncTransferCategory(){const to=state.accounts.find(account=>account.id===Number($('#movement-to-account').value));const category=$('#movement-category');if($('#movement-type').value==='transfer'&&to)category.value=to.kind==='credit'?'Pago de tarjeta':category.value==='Pago de tarjeta'?'Traspaso':category.value;}
 function populateCategories(){ const select=$('#movement-category'); const type=$('#movement-type').value; const keep=select.value; select.innerHTML=CATEGORIES[type].map(c=>`<option>${c}</option>`).join(''); if(CATEGORIES[type].includes(keep))select.value=keep; syncTransferFields(); $all('.expense-categories').forEach(s=>s.innerHTML=CATEGORIES.expense.map(c=>`<option>${c}</option>`).join('')); const filter=$('#movement-category-filter'); const existing=filter.value; filter.innerHTML='<option value="all">Todas las categorías</option>'+[...new Set(state.movements.map(m=>m.category))].sort().map(c=>`<option>${c}</option>`).join(''); filter.value=existing; }
-function renderAll(){ populateCategories(); renderDashboard();renderTotalBalance();renderBackupReminder();renderCardAlerts();renderMovements();renderGoals();renderReminders();renderCapital();renderAccounts(); }
+function renderAll(){ populateCategories(); renderDashboard();renderTotalBalance();renderBackupReminder();renderCardAlerts();renderMovements();renderCompare();renderGoals();renderReminders();renderCapital();renderAccounts(); }
 function open(id){ $(id).showModal(); }
 function editBudget(budgetId){const budget=state.budgets.find(item=>item.id===budgetId);if(!budget)return;editingBudgetId=budgetId;const form=$('#budget-form');form.reset();form.elements.budgetId.value=budgetId;form.elements.category.value=budget.category;form.elements.kind.value=budget.kind||'variable';form.elements.period.value=budget.period||'monthly';form.elements.limit.value=budget.limit;$('#budget-dialog h2').textContent=`Editar límite · ${budget.category}`;$('#budget-form .submit-button').textContent='Guardar cambios';open('#budget-dialog');}
 function editGoal(goalId){const goal=state.goals.find(item=>item.id===goalId);if(!goal)return;editingGoalId=goalId;const form=$('#goal-form');form.reset();form.elements.goalId.value=goalId;form.elements.name.value=goal.name;form.elements.target.value=goal.target;form.elements.current.value=goal.current;form.elements.linkType.value=goal.linkType||'none';populateGoalInvestmentChoices(goal.investmentId||'');populateGoalAccountChoices(goal.accountId||'');populateGoalOriginChoices(goal.originAccountId||'');if(form.elements.investmentId)form.elements.investmentId.value=goal.investmentId||'';syncGoalLink();$('#goal-dialog h2').textContent='Editar meta';$('#goal-form .submit-button').textContent='Guardar cambios';open('#goal-dialog');}
@@ -1334,3 +1334,122 @@ setup();
 setupTutorial();
 let lastChartWidth=window.innerWidth,resizeTimer=null;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(Math.abs(window.innerWidth-lastChartWidth)>40){lastChartWidth=window.innerWidth;renderAll();}},250);});
 setupReminderRepeat();
+/* Comparar periodos (Movimientos → Comparar) y tarjeta «Este mes vs. el anterior» en el Resumen */
+var COMPARE_UNITS={week:'Semana',fortnight:'Quincena',month:'Mes',year:'Año',custom:'Fechas que yo elija'};
+var compareA=null,compareB=null,compareCustom=null,compareReady=false;
+function isoAt(date){return iso(date);}
+function dateAt(value){return new Date(`${value}T12:00:00`);}
+function addDaysIso(value,days){const date=dateAt(value);date.setDate(date.getDate()+days);return iso(date);}
+function daysBetween(fromIso,toIso){return Math.round((dateAt(toIso)-dateAt(fromIso))/86400000);}
+function comparePeriod(unit,value){
+  const date=typeof value==='string'?dateAt(value):new Date(value),y=date.getFullYear(),m=date.getMonth(),d=date.getDate();
+  const short=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'}),monthName=new Intl.DateTimeFormat('es-MX',{month:'long',year:'numeric'}),monthShort=new Intl.DateTimeFormat('es-MX',{month:'short',year:'numeric'});
+  if(unit==='week'){const start=new Date(y,m,d-((date.getDay()+6)%7),12),end=new Date(start);end.setDate(start.getDate()+6);return{from:iso(start),to:iso(end),label:`Semana del ${short.format(start)} al ${short.format(end)}${end.getFullYear()!==today.getFullYear()?' '+end.getFullYear():''}`,short:`la semana del ${short.format(start)}`,tag:`Semana del ${short.format(start)}`};}
+  if(unit==='fortnight'){const first=d<=15,start=new Date(y,m,first?1:16,12),end=new Date(y,m,first?15:new Date(y,m+1,0).getDate(),12);return{from:iso(start),to:iso(end),label:`${first?'1ª':'2ª'} quincena de ${monthName.format(start)}`,short:`la ${first?'1ª':'2ª'} quincena de ${monthShort.format(start)}`,tag:`${first?'1ª':'2ª'} quincena de ${monthShort.format(start)}`};}
+  if(unit==='year')return{from:`${y}-01-01`,to:`${y}-12-31`,label:String(y),short:String(y)};
+  const start=new Date(y,m,1,12),end=new Date(y,m+1,0,12),name=monthName.format(start);return{from:iso(start),to:iso(end),label:name.charAt(0).toUpperCase()+name.slice(1),short:name};
+}
+function shiftPeriod(unit,period,steps){
+  if(unit==='week')return comparePeriod(unit,addDaysIso(period.from,7*steps));
+  if(unit==='year')return comparePeriod(unit,`${Number(period.from.slice(0,4))+steps}-01-01`);
+  if(unit==='fortnight'){let current=period;for(let i=0;i<Math.abs(steps);i++)current=comparePeriod(unit,steps<0?addDaysIso(current.from,-1):addDaysIso(current.to,1));return current;}
+  const start=dateAt(period.from);return comparePeriod(unit,new Date(start.getFullYear(),start.getMonth()+steps,1,12));
+}
+var YEAR_STEPS={week:52,fortnight:24,month:12,year:1};
+function compareOptions(unit){
+  const current=comparePeriod(unit,today),firstYear=state.movements.reduce((min,m)=>m.date&&Number(m.date.slice(0,4))<min?Number(m.date.slice(0,4)):min,today.getFullYear());
+  const count=unit==='week'?60:unit==='fortnight'?30:unit==='month'?25:Math.max(3,today.getFullYear()-firstYear+1);
+  const list=[];let period=current;for(let i=0;i<count;i++){list.push(period);period=shiftPeriod(unit,period,-1);}return list;
+}
+function compareTotals(fromIso,toIso){
+  const rows=state.movements.filter(m=>m.date>=fromIso&&m.date<=toIso),result={income:0,expense:0,investment:0,count:rows.length,expenseByCat:{},incomeByCat:{}};
+  rows.forEach(m=>{const value=Number(m.amount)||0;if(m.type==='expense'){result.expense+=value;result.expenseByCat[m.category]=(result.expenseByCat[m.category]||0)+value;}else if(m.type==='income'&&!m.investmentId){result.income+=value;result.incomeByCat[m.category]=(result.incomeByCat[m.category]||0)+value;}else if(m.type==='investment')result.investment+=value;});
+  result.saving=result.income-result.expense;return result;
+}
+// Si un periodo todavía no termina, recorta los dos al mismo número de días para comparar parejo.
+function compareRanges(a,b,sameDays){
+  const t=iso(today),open=[a,b].find(p=>p.from<=t&&p.to>=t);
+  if(!sameDays||!open)return{a:{...a},b:{...b},trimmed:false,open:!!open};
+  const days=daysBetween(open.from,t),cut=p=>({...p,to:[addDaysIso(p.from,days),p.to].sort()[0]});
+  return{a:cut(a),b:cut(b),trimmed:true,open:true,days:days+1};
+}
+function compareChip(diff,base,goodWhenUp){
+  if(Math.abs(diff)<0.5)return '<span class="compare-chip same">Igual</span>';
+  const good=goodWhenUp?diff>0:diff<0,pct=base>0?` (${diff>0?'+':'−'}${Math.round(Math.abs(diff)/base*100)}%)`:'';
+  return `<span class="compare-chip ${good?'good':'bad'}">${diff>0?'↑':'↓'} ${money.format(Math.abs(diff))}${pct}</span>`;
+}
+function compareCategoryTable(title,mapA,mapB,labelA,labelB,goodWhenUp){
+  const names=[...new Set([...Object.keys(mapA),...Object.keys(mapB)])].sort((x,y)=>Math.max(mapB[y]||0,mapA[y]||0)-Math.max(mapB[x]||0,mapA[x]||0));
+  if(!names.length)return '';
+  const max=Math.max(...names.map(n=>Math.max(mapA[n]||0,mapB[n]||0)),1);
+  return `<h4>${title}</h4><div class="compare-table" role="table"><div class="compare-row compare-head" role="row"><span role="columnheader">Categoría</span><span role="columnheader">${escapeHtml(labelA)}</span><span role="columnheader">${escapeHtml(labelB)}</span><span role="columnheader">Diferencia</span></div>${names.map(n=>{const a=mapA[n]||0,b=mapB[n]||0;return `<div class="compare-row" role="row"><span class="compare-cat" role="cell"><span class="category-icon">${ICONS[n]||'•'}</span><span>${escapeHtml(n)}<i class="compare-bars"><b class="bar-a" style="width:${a/max*100}%"></b><b class="bar-b" style="width:${b/max*100}%"></b></i></span></span><span role="cell">${money.format(a)}</span><span role="cell" class="muted-cell">${money.format(b)}</span><span role="cell">${compareChip(a-b,b,goodWhenUp)}</span></div>`;}).join('')}</div>`;
+}
+function compareSentence(A,B,labelA,labelB,catsA,catsB){
+  if(!A.count&&!B.count)return 'Aún no hay movimientos en estos periodos.';
+  const diff=A.expense-B.expense;let text=Math.abs(diff)<0.5?`En ${labelA} gastaste lo mismo que en ${labelB}`:`En ${labelA} gastaste ${money.format(Math.abs(diff))} ${diff>0?'más':'menos'} que en ${labelB}`;
+  const changes=[...new Set([...Object.keys(catsA),...Object.keys(catsB)])].map(n=>[n,(catsA[n]||0)-(catsB[n]||0)]).filter(([,v])=>diff>0?v>0:v<0).sort((x,y)=>Math.abs(y[1])-Math.abs(x[1]));
+  if(Math.abs(diff)>=0.5&&changes.length)text+=`, sobre todo en ${changes[0][0]} (${changes[0][1]>0?'+':'−'}${money.format(Math.abs(changes[0][1]))})`;
+  const saving=A.saving-B.saving;if(Math.abs(saving)>=0.5)text+=`. Ahorraste ${money.format(Math.abs(saving))} ${saving>0?'más':'menos'}`;
+  return text+'.';
+}
+function setMovementsView(view){
+  $all('.view-tab').forEach(tab=>{const on=tab.dataset.view===view;tab.classList.toggle('active',on);tab.setAttribute('aria-selected',String(on));});
+  $('#movement-list-card').hidden=view!=='list';$('#compare-card').hidden=view!=='compare';
+  state.preferences.movementsView=view;save();if(view==='compare')renderCompare();
+}
+function renderCompare(){
+  const card=$('#compare-card');if(!card||!compareReady)return;
+  const unit=COMPARE_UNITS[state.preferences.compareUnit]?state.preferences.compareUnit:'month',custom=unit==='custom';
+  $('#compare-unit').value=unit;
+  $all('.compare-pick').forEach(label=>label.hidden=custom);$('.compare-custom').hidden=!custom;
+  let a,b;
+  if(custom){
+    if(!compareCustom){const month=comparePeriod('month',today),prev=shiftPeriod('month',month,-1);compareCustom={aFrom:month.from,aTo:iso(today),bFrom:prev.from,bTo:prev.to};}
+    ['aFrom','aTo','bFrom','bTo'].forEach(key=>{const input=$(`#compare-${key.charAt(0)}-${key.slice(1).toLowerCase()}`);if(input)input.value=compareCustom[key];});
+    const fix=(f,t)=>f<=t?[f,t]:[t,f],[af,at]=fix(compareCustom.aFrom,compareCustom.aTo),[bf,bt]=fix(compareCustom.bFrom,compareCustom.bTo),fmt=v=>displayDate(v)+(v.slice(0,4)!==String(today.getFullYear())?` ${v.slice(0,4)}`:'');
+    a={from:af,to:at,label:`${fmt(af)} – ${fmt(at)}`,short:`el periodo del ${fmt(af)} al ${fmt(at)}`,tag:`${fmt(af)} – ${fmt(at)}`};b={from:bf,to:bt,label:`${fmt(bf)} – ${fmt(bt)}`,short:`el periodo del ${fmt(bf)} al ${fmt(bt)}`,tag:`${fmt(bf)} – ${fmt(bt)}`};
+  }else{
+    const options=compareOptions(unit),selectA=$('#compare-a'),selectB=$('#compare-b');
+    if(!compareA||!options.some(p=>p.from===compareA))compareA=options[0].from;
+    if(!compareB||!options.some(p=>p.from===compareB))compareB=options[1].from;
+    const markup=options.map(p=>`<option value="${p.from}">${escapeHtml(p.label)}</option>`).join('');
+    if(selectA.dataset.unit!==unit+options.length){selectA.innerHTML=markup;selectB.innerHTML=markup;selectA.dataset.unit=unit+options.length;}
+    selectA.value=compareA;selectB.value=compareB;
+    a=options.find(p=>p.from===compareA);b=options.find(p=>p.from===compareB);
+  }
+  const ranges=compareRanges(a,b,!custom&&$('#compare-same-days').checked);
+  $('#compare-same-days-label').hidden=custom||!ranges.open;
+  const sameDaysText=$('#compare-same-days-label span');if(sameDaysText)sameDaysText.textContent=ranges.trimmed?`Solo los primeros ${ranges.days} ${ranges.days===1?'día':'días'} de cada periodo (el actual aún no termina)`:'Solo hasta el mismo día (el periodo actual aún no termina)';
+  const A=compareTotals(ranges.a.from,ranges.a.to),B=compareTotals(ranges.b.from,ranges.b.to),cap=text=>text.charAt(0).toUpperCase()+text.slice(1),tagA=a.tag||cap(a.short),tagB=b.tag||cap(b.short);
+  $('#compare-sentence').textContent=a.from===b.from&&a.to===b.to?'Elegiste el mismo periodo dos veces.':compareSentence(A,B,a.short,b.short,A.expenseByCat,B.expenseByCat);
+  const metrics=[['Ingresos','income',true],['Gastos','expense',false],['Ahorro','saving',true,'Ingresos menos gastos'],['Aportado a inversiones','investment',true,'No cuenta como gasto']];
+  $('#compare-summary').innerHTML=metrics.map(([label,key,up,note])=>`<article class="compare-stat ${key}"><p>${label}${note?`<small> · ${note}</small>`:''}</p><div class="compare-values"><div><small>${escapeHtml(tagA)}</small><strong>${money.format(A[key])}</strong></div><div><small>${escapeHtml(tagB)}</small><strong class="muted-value">${money.format(B[key])}</strong></div></div>${compareChip(A[key]-B[key],Math.abs(B[key]),up)}</article>`).join('');
+  $('#compare-categories').innerHTML=compareCategoryTable('Gastos por categoría',A.expenseByCat,B.expenseByCat,tagA,tagB,false)+compareCategoryTable('Ingresos por categoría',A.incomeByCat,B.incomeByCat,tagA,tagB,true);
+}
+function renderHomeCompare(){
+  const box=$('#home-compare');if(!box||!compareReady)return;
+  const month=comparePeriod('month',today),prev=shiftPeriod('month',month,-1),ranges=compareRanges(month,prev,true),A=compareTotals(ranges.a.from,ranges.a.to),B=compareTotals(ranges.b.from,ranges.b.to);
+  $('#home-compare-subtitle').textContent=`Del 1 al ${today.getDate()} de ${month.short.split(' ')[0]} contra los mismos días de ${prev.short.split(' ')[0]}`;
+  if(!A.count&&!B.count){box.innerHTML='<p class="empty">Cuando registres movimientos verás aquí si este mes vas mejor o peor que el anterior.</p>';return;}
+  box.innerHTML=[['Ingresos','income',true],['Gastos','expense',false],['Ahorro','saving',true]].map(([label,key,up])=>`<div class="home-compare-item"><p>${label}</p><strong>${money.format(A[key])}</strong><small>vs. ${money.format(B[key])}</small>${compareChip(A[key]-B[key],Math.abs(B[key]),up)}</div>`).join('');
+}
+function setupCompare(){
+  if(!$('#compare-card'))return;compareReady=true;
+  $all('.view-tab').forEach(tab=>tab.onclick=()=>setMovementsView(tab.dataset.view));
+  $('#compare-unit').onchange=event=>{state.preferences.compareUnit=event.target.value;compareA=null;compareB=null;save();renderCompare();};
+  $('#compare-a').onchange=event=>{compareA=event.target.value;renderCompare();};
+  $('#compare-b').onchange=event=>{compareB=event.target.value;renderCompare();};
+  $('#compare-same-days').onchange=renderCompare;
+  ['a-from','a-to','b-from','b-to'].forEach(key=>{const input=$(`#compare-${key}`);input.onchange=()=>{if(!input.value)return;const [side,edge]=key.split('-');compareCustom[side+(edge==='from'?'From':'To')]=input.value;renderCompare();};});
+  $all('.compare-quick [data-quick]').forEach(button=>button.onclick=()=>{
+    let unit=state.preferences.compareUnit||'month';if(unit==='custom'){unit='month';state.preferences.compareUnit=unit;save();}
+    const base=compareA?comparePeriod(unit,compareA):comparePeriod(unit,today);compareA=base.from;compareB=shiftPeriod(unit,base,button.dataset.quick==='year'?-YEAR_STEPS[unit]:-1).from;
+    if(!compareOptions(unit).some(p=>p.from===compareB)){compareB=shiftPeriod(unit,base,-1).from;toast('Ese periodo es demasiado antiguo; elige otro en la lista.');}
+    renderCompare();
+  });
+  $('#home-compare-link').onclick=event=>{event.preventDefault();state.preferences.compareUnit='month';compareA=null;compareB=null;$('#compare-same-days').checked=true;goToPage('movimientos');setMovementsView('compare');};
+  addHelp($('#compare-card .card-title'),'Elige cada cuánto comparar (semana, quincena, mes o año) y los dos periodos. Si uno todavía no termina, se comparan los mismos días de cada uno para que sea parejo. Los traspasos y pagos de tarjeta no cuentan como gasto ni ingreso.');
+  setMovementsView(state.preferences.movementsView==='compare'?'compare':'list');
+  renderHomeCompare();
+}
+setupCompare();
